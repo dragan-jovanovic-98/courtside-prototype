@@ -220,7 +220,7 @@ export default function CourtGridPage() {
       <header className="border-b bg-card shrink-0 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-5 h-11 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Image src="/COURTSIDE AI logo only v2 Transparent.svg" alt="Courtside AI" width={22} height={22} className="h-5.5 w-5.5" />
+            <Image src="/courtside-prototype/courtside-logo.svg" alt="Courtside AI" width={22} height={22} className="h-5.5 w-5.5" />
             <span className="text-sm font-semibold text-foreground tracking-tight">Courtside AI</span>
             <span className="text-xs text-muted-foreground">/ Courts</span>
           </div>
