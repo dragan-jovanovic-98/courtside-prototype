@@ -4,10 +4,21 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Courtside AI Design Tokens
+ *
+ * Brand: Courtside Teal (#1CABB0 / oklch(0.65 0.12 192))
+ * Style: Light, modern, clean — lots of white, soft shadows, slightly rounded
+ * Approach: Teal-primary with neutral grays. Approachable and professional,
+ *           structured enough for data-heavy facility management.
+ *
+ * Logo: SVG with fill #1CABB0 — geometric court/net motif
+ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -38,6 +49,26 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Courtside-specific semantic colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Booking status colors */
+  --color-booking-standard: var(--booking-standard);
+  --color-booking-member: var(--booking-member);
+  --color-booking-openplay: var(--booking-openplay);
+  --color-booking-program: var(--booking-program);
+  --color-booking-league: var(--booking-league);
+  --color-booking-event: var(--booking-event);
+  --color-booking-maintenance: var(--booking-maintenance);
+  --color-booking-recurring: var(--booking-recurring);
+
+  /* Slightly rounded — not too sharp, not too bubbly */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -47,73 +78,163 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ========================================
+   LIGHT THEME (Default)
+   Clean white background, Courtside Teal primary,
+   neutral grays for text and borders
+   ======================================== */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  /* Core */
+  --background: oklch(0.985 0.002 192);      /* Near-white with very subtle teal warmth */
+  --foreground: oklch(0.155 0.015 220);      /* Near-black with slight cool undertone */
+
+  /* Cards & Popovers */
+  --card: oklch(1 0 0);                      /* Pure white cards */
+  --card-foreground: oklch(0.155 0.015 220);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.155 0.015 220);
+
+  /* Primary — Courtside Teal */
+  --primary: oklch(0.62 0.12 192);           /* #1CABB0 — the brand teal */
+  --primary-foreground: oklch(0.99 0 0);     /* White text on teal */
+
+  /* Secondary — Soft gray */
+  --secondary: oklch(0.965 0.005 220);       /* Very light gray */
+  --secondary-foreground: oklch(0.30 0.015 220);
+
+  /* Muted — Subtle backgrounds */
+  --muted: oklch(0.965 0.003 220);           /* Light gray */
+  --muted-foreground: oklch(0.50 0.01 220);  /* Medium gray text */
+
+  /* Accent — Light teal for hover states */
+  --accent: oklch(0.955 0.02 192);           /* Very light teal tint */
+  --accent-foreground: oklch(0.30 0.015 220);
+
+  /* Destructive — Red for errors/deletions */
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Borders & Inputs */
+  --border: oklch(0.915 0.005 220);          /* Light border */
+  --input: oklch(0.915 0.005 220);
+  --ring: oklch(0.62 0.12 192);              /* Focus ring = primary teal */
+
+  /* Semantic Colors */
+  --success: oklch(0.52 0.17 155);           /* Green — distinct from teal primary */
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.75 0.15 75);            /* Amber */
+  --warning-foreground: oklch(0.28 0.04 55);
+  --info: oklch(0.58 0.18 250);              /* Blue — distinct from teal primary */
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Chart Colors — Courtside palette for data viz */
+  --chart-1: oklch(0.62 0.12 192);           /* Primary teal */
+  --chart-2: oklch(0.55 0.18 250);           /* Blue */
+  --chart-3: oklch(0.52 0.17 155);           /* Green */
+  --chart-4: oklch(0.75 0.15 75);            /* Amber */
+  --chart-5: oklch(0.58 0.18 310);           /* Purple */
+
+  /* Booking Block Colors (Courts grid)
+     All colors chosen for WCAG AA contrast with white text (4.5:1 minimum) */
+  --booking-standard: oklch(0.55 0.18 250);  /* Blue */
+  --booking-member: oklch(0.50 0.14 155);    /* Dark green */
+  --booking-openplay: oklch(0.58 0.16 55);   /* Burnt orange */
+  --booking-program: oklch(0.50 0.17 300);   /* Purple */
+  --booking-league: oklch(0.45 0.18 25);     /* Dark red */
+  --booking-event: oklch(0.55 0.14 85);      /* Dark yellow/olive */
+  --booking-maintenance: oklch(0.48 0.01 220); /* Dark gray */
+  --booking-recurring: oklch(0.52 0.10 192); /* Dark teal (nods to primary) */
+
+  /* Radius — slightly rounded, not bubbly */
+  --radius: 0.5rem;                          /* 8px base */
+
+  /* Sidebar — light with subtle teal accent */
+  --sidebar: oklch(0.98 0.003 192);
+  --sidebar-foreground: oklch(0.30 0.015 220);
+  --sidebar-primary: oklch(0.62 0.12 192);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.94 0.02 192);
+  --sidebar-accent-foreground: oklch(0.30 0.015 220);
+  --sidebar-border: oklch(0.92 0.005 220);
+  --sidebar-ring: oklch(0.62 0.12 192);
 }
 
+/* ========================================
+   DARK THEME
+   Deep slate background, brighter teal primary,
+   maintains readability and the Courtside brand
+   ======================================== */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Core */
+  --background: oklch(0.155 0.015 220);      /* Deep slate */
+  --foreground: oklch(0.95 0.003 220);       /* Off-white text */
+
+  /* Cards & Popovers */
+  --card: oklch(0.20 0.012 220);             /* Slightly lighter than background */
+  --card-foreground: oklch(0.95 0.003 220);
+  --popover: oklch(0.20 0.012 220);
+  --popover-foreground: oklch(0.95 0.003 220);
+
+  /* Primary — Brighter teal for dark backgrounds */
+  --primary: oklch(0.72 0.12 192);           /* Brighter Courtside Teal for dark mode */
+  --primary-foreground: oklch(0.155 0.015 220);
+
+  /* Secondary */
+  --secondary: oklch(0.25 0.012 220);
+  --secondary-foreground: oklch(0.90 0.003 220);
+
+  /* Muted */
+  --muted: oklch(0.25 0.012 220);
+  --muted-foreground: oklch(0.62 0.008 220);
+
+  /* Accent */
+  --accent: oklch(0.25 0.02 192);
+  --accent-foreground: oklch(0.90 0.003 220);
+
+  /* Destructive */
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  /* Borders & Inputs */
+  --border: oklch(0.30 0.012 220);
+  --input: oklch(0.30 0.012 220);
+  --ring: oklch(0.72 0.12 192);
+
+  /* Semantic Colors */
+  --success: oklch(0.60 0.17 155);
+  --success-foreground: oklch(0.155 0 0);
+  --warning: oklch(0.78 0.13 75);
+  --warning-foreground: oklch(0.20 0.04 55);
+  --info: oklch(0.68 0.15 250);
+  --info-foreground: oklch(0.155 0 0);
+
+  /* Chart Colors */
+  --chart-1: oklch(0.72 0.12 192);
+  --chart-2: oklch(0.65 0.16 250);
+  --chart-3: oklch(0.60 0.17 155);
+  --chart-4: oklch(0.78 0.13 75);
+  --chart-5: oklch(0.68 0.16 310);
+
+  /* Booking Block Colors (brighter for dark bg) */
+  --booking-standard: oklch(0.60 0.18 250);
+  --booking-member: oklch(0.55 0.15 155);
+  --booking-openplay: oklch(0.62 0.16 55);
+  --booking-program: oklch(0.55 0.17 300);
+  --booking-league: oklch(0.52 0.18 25);
+  --booking-event: oklch(0.60 0.14 85);
+  --booking-maintenance: oklch(0.45 0.01 220);
+  --booking-recurring: oklch(0.55 0.10 192);
+
+  /* Radius — same as light */
+  --radius: 0.5rem;
+
+  /* Sidebar — dark with subtle border */
+  --sidebar: oklch(0.18 0.012 220);
+  --sidebar-foreground: oklch(0.90 0.003 220);
+  --sidebar-primary: oklch(0.72 0.12 192);
+  --sidebar-primary-foreground: oklch(0.155 0.015 220);
+  --sidebar-accent: oklch(0.25 0.02 192);
+  --sidebar-accent-foreground: oklch(0.90 0.003 220);
+  --sidebar-border: oklch(0.30 0.012 220);
+  --sidebar-ring: oklch(0.72 0.12 192);
 }
 
 @layer base {
@@ -124,6 +245,6 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans antialiased;
   }
 }
