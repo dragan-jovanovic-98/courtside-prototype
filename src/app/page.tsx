@@ -158,6 +158,8 @@ export default function HomePage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [selectedCourtIdx, setSelectedCourtIdx] = useState<number | null>(null);
   const [courtTab, setCourtTab] = useState<'overview' | 'pricing' | 'rules'>('overview');
+  const [bkFilter, setBkFilter] = useState<string>('all');
+  const [bkCourtFilter, setBkCourtFilter] = useState<string>('all');
 
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -202,18 +204,15 @@ export default function HomePage() {
 
   // Fixed slot height — sized to fit operating hours comfortably, full day scrolls
   const operatingSlots = (FACILITY_CLOSE_HOUR - FACILITY_OPEN_HOUR) * 2;
-  const SLOT_HEIGHT = gridHeight > 0 ? Math.max(MIN_SLOT_HEIGHT, Math.floor(gridHeight / operatingSlots) - 1) : 20;
+  const SLOT_HEIGHT = gridHeight > 0 ? Math.max(MIN_SLOT_HEIGHT, Math.floor(gridHeight / operatingSlots)) : 22;
   const HOUR_HEIGHT = SLOT_HEIGHT * 2;
 
   // Auto-scroll to facility operating hours on load
   useEffect(() => {
-    requestAnimationFrame(() => {
-      if (gridScrollRef.current && activeTab === 'schedule' && scheduleView === 'day') {
-        gridScrollRef.current.scrollTop = FACILITY_OPEN_HOUR * HOUR_HEIGHT - 4;
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (gridScrollRef.current && activeTab === 'schedule' && scheduleView === 'day' && SLOT_HEIGHT > MIN_SLOT_HEIGHT) {
+      gridScrollRef.current.scrollTop = FACILITY_OPEN_HOUR * HOUR_HEIGHT;
+    }
+  }, [activeTab, scheduleView, SLOT_HEIGHT, HOUR_HEIGHT]);
 
   function isUnbookable(ci: number, si: number) {
     const court = courts[ci];
@@ -239,6 +238,80 @@ export default function HomePage() {
   }
   const currentTimeSlot = (10.25 - vsh) * 2;
 
+  // Court management data
+  const courtMgmtData = [
+    { name: 'Court 1', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 34, bkgDelta: +6, utilization: 78, utilDelta: +4, indoor: true, revWeek: 1020, capacity: 4, amenities: 'Nets, Lighting' },
+    { name: 'Court 2', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 28, bkgDelta: -2, utilization: 65, utilDelta: -1, indoor: true, revWeek: 840, capacity: 4, amenities: 'Nets, Lighting' },
+    { name: 'Court 3', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 31, bkgDelta: +3, utilization: 72, utilDelta: +2, indoor: true, revWeek: 930, capacity: 4, amenities: 'Nets, Lighting' },
+    { name: 'Court 4', sport: 'Tennis', surface: 'Hardcourt', status: 'Active' as const, rate: 45, bookings: 22, bkgDelta: +2, utilization: 58, utilDelta: +3, indoor: true, revWeek: 990, capacity: 4, amenities: 'Net, Lighting, Scoreboard', split: 'Splits → Court 4A, 4B' },
+    { name: 'Court 4A', sport: 'Pickleball', surface: 'Hardcourt', status: 'Active' as const, rate: 30, bookings: 18, bkgDelta: +5, utilization: 45, utilDelta: +7, indoor: true, revWeek: 540, capacity: 4, amenities: 'Nets', parent: 'Sub of Court 4' },
+    { name: 'Court 4B', sport: 'Pickleball', surface: 'Hardcourt', status: 'Active' as const, rate: 30, bookings: 15, bkgDelta: +2, utilization: 40, utilDelta: +5, indoor: true, revWeek: 450, capacity: 4, amenities: 'Nets', parent: 'Sub of Court 4' },
+    { name: 'Court 5', sport: 'Tennis', surface: 'Hardcourt', status: 'Active' as const, rate: 45, bookings: 26, bkgDelta: -1, utilization: 68, utilDelta: -2, indoor: true, revWeek: 1170, capacity: 4, amenities: 'Net, Lighting, Scoreboard' },
+    { name: 'Court 6', sport: 'Basketball / Volleyball', surface: 'Hardwood', status: 'Active' as const, rate: 60, bookings: 20, bkgDelta: +4, utilization: 55, utilDelta: +3, indoor: true, revWeek: 1200, capacity: 12, amenities: 'Hoops, Net, Scoreboard', hours: 'Closes 8:00 PM' },
+  ];
+  const selectedCourtData = selectedCourtIdx !== null ? courtMgmtData[selectedCourtIdx] : null;
+
+  // Dashboard / bookings data
+  const dashBookings = [
+    { id: 'b1', time: '8:00 AM', customer: 'Jane Doe', court: 'Court 1', type: 'Standard' as const, duration: '1h', amount: 30, status: 'paid' as const, source: 'online' as const, checkedIn: true, past: true },
+    { id: 'b2', time: '8:00 AM', court: 'Court 3', customer: 'Junior Camp', type: 'Program' as const, duration: '4h', amount: 200, status: 'paid' as const, source: 'staff' as const, checkedIn: true, past: true },
+    { id: 'b3', time: '8:30 AM', court: 'Court 2', customer: 'Mike R.', type: 'Member' as const, duration: '1h30m', amount: 38, status: 'paid' as const, source: 'online' as const, checkedIn: true, past: true },
+    { id: 'b4', time: '9:00 AM', court: 'Court 1', customer: 'Open Play', type: 'Open Play' as const, duration: '2h', amount: 0, status: 'paid' as const, source: 'staff' as const, checkedIn: true, past: true },
+    { id: 'b5', time: '10:00 AM', court: 'Court 4', customer: 'Tennis Clinic', type: 'Program' as const, duration: '2h', amount: 150, status: 'paid' as const, source: 'staff' as const, checkedIn: true, past: true },
+    { id: 'b6', time: '11:30 AM', court: 'Court 1', customer: 'Alex M.', type: 'Member' as const, duration: '1h30m', amount: 38, status: 'paid' as const, source: 'ai' as const, past: false },
+    { id: 'b7', time: '12:00 PM', court: 'Court 4A', customer: 'PB Drop-In', type: 'Open Play' as const, duration: '2h', amount: 0, status: 'paid' as const, source: 'staff' as const, past: false },
+    { id: 'b8', time: '1:00 PM', court: 'Court 2', customer: 'Tom K.', type: 'Standard' as const, duration: '1h', amount: 45, status: 'paid' as const, source: 'online' as const, past: false },
+    { id: 'b9', time: '2:00 PM', court: 'Court 1', customer: 'Sarah L.', type: 'Standard' as const, duration: '1h', amount: 45, status: 'unpaid' as const, source: 'walkin' as const, past: false },
+    { id: 'b10', time: '2:30 PM', court: 'Court 2', customer: 'Emma S.', type: 'Standard' as const, duration: '1h30m', amount: 68, status: 'pending' as const, source: 'online' as const, past: false },
+    { id: 'b11', time: '3:00 PM', court: 'Court 1', customer: 'Walk-in', type: 'Standard' as const, duration: '1h', amount: 45, status: 'paid' as const, source: 'walkin' as const, past: false },
+    { id: 'b12', time: '5:00 PM', court: 'Court 1', customer: 'Evening Open', type: 'Open Play' as const, duration: '2h', amount: 0, status: 'paid' as const, source: 'staff' as const, past: false },
+    { id: 'b13', time: '5:00 PM', court: 'Court 4', customer: 'League Match', type: 'League' as const, duration: '2h', amount: 0, status: 'paid' as const, source: 'recurring' as const, past: false },
+    { id: 'b14', time: '7:30 PM', court: 'Court 1', customer: 'Night Game', type: 'Standard' as const, duration: '1h30m', amount: 68, status: 'paid' as const, source: 'online' as const, past: false },
+  ];
+  const [showAllPast, setShowAllPast] = useState(false);
+  const dashFiltered = dashBookings.filter(b => {
+    if (bkFilter !== 'all' && b.status !== bkFilter) return false;
+    if (bkCourtFilter !== 'all' && b.court !== bkCourtFilter) return false;
+    return true;
+  });
+  const dashUpcoming = dashFiltered.filter(b => !b.past);
+  // Past: show last 2 hours + any unpaid/pending, or all if expanded
+  const dashRecentPast = dashFiltered.filter(b => b.past && (b.status === 'unpaid' || b.status === 'pending'));
+  // Simulated: 8:00 AM and 8:30 AM bookings are >2hrs ago, 9:00 AM+ are within 2hrs (current time ~10:15 AM)
+  const dashRecentPastWindow = dashFiltered.filter(b => b.past && b.status !== 'unpaid' && b.status !== 'pending' && ['9:00 AM', '10:00 AM'].some(t => b.time >= t));
+  const dashOlderPast = dashFiltered.filter(b => b.past && b.status !== 'unpaid' && b.status !== 'pending' && !dashRecentPastWindow.includes(b));
+  const dashVisiblePast = [...dashRecentPast, ...dashRecentPastWindow].sort((a, b) => a.time.localeCompare(b.time));
+  const dashTotalRevenue = dashBookings.filter(b => b.status === 'paid').reduce((s, b) => s + b.amount, 0);
+  const dashTotalBookings = dashBookings.length;
+  const dashUnpaid = dashBookings.filter(b => b.status === 'unpaid');
+  const dashPending = dashBookings.filter(b => b.status === 'pending');
+  const dashUnpaidTotal = dashUnpaid.reduce((s, b) => s + b.amount, 0);
+  const dashCourtUtil = [
+    { name: 'Court 1', pct: 78 }, { name: 'Court 2', pct: 65 }, { name: 'Court 3', pct: 72 },
+    { name: 'Court 4', pct: 58 }, { name: 'Court 4A', pct: 45 }, { name: 'Court 4B', pct: 40 },
+    { name: 'Court 5', pct: 68 }, { name: 'Court 6', pct: 55 },
+  ];
+  const dashActivity = [
+    { time: '10:02 AM', event: 'Sarah L. booked Court 1 at 2:00 PM', type: 'booking' as const },
+    { time: '9:48 AM', event: 'Walk-in checked in — Court 1', type: 'checkin' as const },
+    { time: '9:30 AM', event: 'Mike R. cancelled 4:00 PM (Court 2)', type: 'cancel' as const },
+    { time: '9:22 AM', event: 'Payment received: Jane Doe — $30', type: 'payment' as const },
+    { time: '9:15 AM', event: 'AI booked Court 2 for Alex M.', type: 'ai' as const },
+    { time: '9:01 AM', event: 'Online booking: Emma S. — Court 2', type: 'booking' as const },
+    { time: '8:30 AM', event: 'Mike R. checked in — Court 2', type: 'checkin' as const },
+    { time: '8:02 AM', event: 'Jane Doe checked in — Court 1', type: 'checkin' as const },
+  ];
+  const activityDotColor: Record<string, string> = { booking: 'bg-primary', checkin: 'bg-primary/50', cancel: 'bg-destructive', payment: 'bg-primary', ai: 'bg-info' };
+  const dashTypeColor: Record<string, string> = {
+    'Standard': 'bg-blue-500/10 text-blue-700 border-blue-500/20',
+    'Member': 'bg-green-500/10 text-green-700 border-green-500/20',
+    'Open Play': 'bg-orange-500/10 text-orange-700 border-orange-500/20',
+    'Program': 'bg-purple-500/10 text-purple-700 border-purple-500/20',
+    'League': 'bg-rose-500/10 text-rose-700 border-rose-500/20',
+    'Event': 'bg-amber-500/10 text-amber-700 border-amber-500/20',
+  };
+  const dashSourceLabel: Record<string, string> = { 'online': 'Online', 'ai': 'AI', 'walkin': 'Walk-in', 'recurring': 'Recurring', 'staff': 'Staff' };
+
   return (
     <div className="h-screen flex bg-background overflow-hidden">
       {/* ===== SIDEBAR ===== */}
@@ -248,11 +321,11 @@ export default function HomePage() {
         <div className="h-14 flex items-center border-b px-3">
           {sidebarCollapsed ? (
             <div className="flex items-center justify-center w-full">
-              <Image src="/courtside-prototype/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7" />
+              <Image src="/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7" />
             </div>
           ) : (
             <div className="flex items-center gap-2.5">
-              <Image src="/courtside-prototype/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7 shrink-0" />
+              <Image src="/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7 shrink-0" />
               <span className="text-[15px] font-bold text-foreground tracking-tight">Courtside AI</span>
             </div>
           )}
@@ -366,14 +439,14 @@ export default function HomePage() {
         <div className="h-[3px] bg-primary shrink-0" />
 
         {/* ===== HOME PAGE ===== */}
-        {activeNav === 'home' && <>
+        {activeNav === 'home' && (<>
         {/* Top bar — Schedule / Dashboard toggle */}
         <div className="h-14 border-b bg-card shrink-0 flex items-center px-6">
           <div className="flex items-center border border-border rounded-md overflow-hidden">
             {(['schedule', 'dashboard'] as const).map((tab, i) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-5 py-2 text-sm font-semibold transition-colors ${i > 0 ? 'border-l border-border' : ''}
-                  ${activeTab === tab ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                  ${activeTab === tab ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
                 {tab === 'schedule' ? 'Schedule' : 'Dashboard'}
               </button>
             ))}
@@ -386,66 +459,64 @@ export default function HomePage() {
             {/* View toggle + date + filters */}
             <div className="shrink-0 border-b bg-card px-6 h-12 flex items-center justify-between">
               {/* Left: view toggle */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center border border-border rounded-md overflow-hidden">
-                  {(['day', 'week', 'month', 'list'] as const).map((view, vi) => (
-                    <button key={view} onClick={() => setScheduleView(view)}
-                      className={`px-4 py-1.5 text-sm font-medium transition-colors ${vi > 0 ? 'border-l border-border' : ''}
-                        ${scheduleView === view ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
-                      {view === 'day' ? 'Day' : view === 'week' ? 'Week' : view === 'month' ? 'Month' : 'List'}
-                    </button>
-                  ))}
-                </div>
-                <Button size="sm" className="h-8 text-xs font-semibold px-3">+ New Booking</Button>
+              <div className="flex items-center border border-border rounded-md overflow-hidden">
+                {(['day', 'week', 'month', 'list'] as const).map((view, vi) => (
+                  <button key={view} onClick={() => setScheduleView(view)}
+                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${vi > 0 ? 'border-l border-border' : ''}
+                      ${scheduleView === view ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                    {view === 'day' ? 'Day' : view === 'week' ? 'Week' : view === 'month' ? 'Month' : 'List'}
+                  </button>
+                ))}
               </div>
-              {/* Right: date controls + search + filters */}
-              <div className="flex items-center gap-2">
+              {/* Right: date controls + filters + new booking */}
+              <div className="flex items-center gap-3">
                 {scheduleView === 'list' && (
                   <div className="relative flex items-center">
                     <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <input type="text" placeholder="Search..." className="h-7 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-40 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <input type="text" placeholder="Search..." className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-44 focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
                 )}
                 {scheduleView === 'day' && (
-                  <div className="flex items-center gap-1">
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-0.5">
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
                       <span className="text-sm font-semibold text-foreground">FRIDAY, MARCH 20, 2026</span>
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
                   </div>
                 )}
                 {scheduleView === 'week' && (
-                  <div className="flex items-center gap-1">
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-0.5">
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
                       <span className="text-sm font-semibold text-foreground">MAR 16 — MAR 22, 2026</span>
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
                   </div>
                 )}
                 {scheduleView === 'month' && (
-                  <div className="flex items-center gap-1">
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-0.5">
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
                       <span className="text-sm font-semibold text-foreground">MARCH 2026</span>
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
                   </div>
                 )}
                 {scheduleView === 'list' && (
-                  <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
                     <span className="text-sm font-semibold text-foreground">MAR 20 — MAY 14, 2026</span>
                     <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 )}
-                <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border hover:bg-muted transition-colors text-sm text-muted-foreground">
+                <button className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border hover:bg-muted transition-colors text-xs font-semibold text-muted-foreground">
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   Filters
                 </button>
+                <Button size="sm" className="h-8 text-xs font-semibold px-4">+ New Booking</Button>
               </div>
             </div>
 
@@ -469,9 +540,9 @@ export default function HomePage() {
                           ? 'border-r-2 border-border/60'
                           : i < courts.length - 1 ? 'border-r border-border/30' : '';
                         return (
-                          <div key={i} className={`py-1.5 px-1.5 text-center ${borderClass} ${isInMultiGroup ? 'bg-muted/60' : ''}`}>
-                            <p className="text-[13px] font-bold leading-tight">{court.name}</p>
-                            <p className="text-[10px] text-muted-foreground leading-tight">
+                          <div key={i} className={`py-2 px-2 text-center ${borderClass} ${isInMultiGroup ? 'bg-muted/60' : ''}`}>
+                            <p className="text-[13px] font-bold leading-snug">{court.name}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium leading-snug">
                               {court.sport}
                               {isGroupStart && <span className="text-primary/60"> · Split</span>}
                               {court.parentIndex !== undefined && <span className="text-primary/60"> · Sub</span>}
@@ -495,13 +566,13 @@ export default function HomePage() {
                         <div className="absolute inset-0 pointer-events-none">
                           {viewHours.map((_, i) => (
                             <div key={i} style={{ height: HOUR_HEIGHT }}>
-                              {i > 0 && <div className="border-t border-border/70" />}
-                              <div className="border-t border-dotted border-border/25" style={{ marginTop: i > 0 ? SLOT_HEIGHT - 1 : SLOT_HEIGHT }} />
+                              {i > 0 && <div className="border-t border-border/80" />}
+                              <div className="border-t border-dotted border-border/35" style={{ marginTop: i > 0 ? SLOT_HEIGHT - 1 : SLOT_HEIGHT }} />
                             </div>
                           ))}
                         </div>
                         <div className="absolute inset-0 pointer-events-none flex">
-                          {courts.map((_, i) => <div key={i} className={`flex-1 ${i < courts.length - 1 ? 'border-r border-border/50' : ''}`} />)}
+                          {courts.map((_, i) => <div key={i} className={`flex-1 ${i < courts.length - 1 ? 'border-r border-border/70' : ''}`} />)}
                         </div>
                         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${courts.length}, 1fr)` }}>
                           {courts.map((court, ci) => {
@@ -715,6 +786,7 @@ export default function HomePage() {
                         <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Court</th>
                         <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Sport</th>
                         <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Type</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
                         <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Status</th>
                       </tr>
                     </thead>
@@ -727,6 +799,7 @@ export default function HomePage() {
                           <td className="py-2 text-sm text-muted-foreground">{courts[b.court].name}</td>
                           <td className="py-2 text-sm text-muted-foreground">{b.sport || courts[b.court].sport}</td>
                           <td className="py-2 text-xs text-muted-foreground">{typeLabels[b.type]}</td>
+                          <td className="py-2 text-right text-sm tabular-nums">{b.type === 'openplay' ? `$${(b.duration * 7.5).toFixed(2)}` : b.type === 'program' ? '—' : `$${(b.duration * 15 + 10).toFixed(2)}`}</td>
                           <td className="py-2 text-right">
                             {b.payment === 'paid' && <span className="text-xs font-medium text-primary">Paid</span>}
                             {b.payment === 'unpaid' && <span className="text-xs font-bold text-destructive">Unpaid</span>}
@@ -744,7 +817,7 @@ export default function HomePage() {
             </div>
             {/* Detail panel — shared across all views */}
             {selectedBooking && (
-              <div className="w-72 border-l bg-card shrink-0 flex flex-col overflow-hidden shadow-lg animate-in slide-in-from-right-5 duration-200">
+              <div className="w-80 border-l bg-card shrink-0 flex flex-col overflow-hidden shadow-lg animate-in slide-in-from-right-5 duration-200">
                 <DetailPanel b={selectedBooking} cn={selectedCourt} vsh={vsh} onClose={() => { setSelectedBooking(null); setSelectedCourt(''); }} />
               </div>
             )}
@@ -754,74 +827,175 @@ export default function HomePage() {
 
         {/* ===== DASHBOARD TAB ===== */}
         {activeTab === 'dashboard' && (
+          <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-[1100px] mx-auto px-5 py-5 space-y-5">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <MCard title="Revenue Today" value="$2,450" change="+12%" positive />
-                <MCard title="Bookings" value="34" change="+5 vs last Wed" positive />
-                <MCard title="Court Utilization" value="72%" change="+4%" positive />
-                <MCard title="RevPACH" value="$48/hr" change="+$3" positive />
-                <MCard title="AI Revenue" value="$340" change="+8%" positive />
+            {/* Dashboard toolbar */}
+            <div className="px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-1">
+                <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
+                  <span className="text-sm font-semibold text-foreground">FRIDAY, MARCH 20, 2026</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+                <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
               </div>
-
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />Attention Required
-                  </CardTitle>
-                  <CardDescription>3 items need your attention</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <AItem s="high" t="1 Unpaid Booking — Sarah L. on Court 1" />
-                  <AItem s="medium" t="1 Pending Payment — Lisa P. on Court 2" />
-                  <AItem s="info" t="2 AI Escalations — need follow-up" />
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-3"><CardTitle className="text-base">AI Performance</CardTitle><CardDescription>Last 7 days</CardDescription></CardHeader>
-                  <CardContent><div className="divide-y">
-                    <DRow l="Calls Handled" v="87" /><DRow l="AI Revenue" v="$2,340" hl="primary" /><DRow l="Resolution Rate" v="89%" /><DRow l="AI ROI" v="5,370%" hl="success" />
-                  </div></CardContent>
-                </Card>
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-3"><CardTitle className="text-base">Today&apos;s Summary</CardTitle><CardDescription>Wednesday, March 19</CardDescription></CardHeader>
-                  <CardContent><div className="divide-y">
-                    <DRow l="Total Bookings" v="34" /><DRow l="Checked In" v="1 of 34" /><DRow l="Revenue Collected" v="$2,205" /><DRow l="Outstanding" v="$245" hl="warning" />
-                  </div></CardContent>
-                </Card>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold px-3">Walk-In</Button>
+                <Button size="sm" className="h-8 text-xs font-semibold px-4">+ New Booking</Button>
               </div>
-
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3"><CardTitle className="text-base">Next Up</CardTitle><CardDescription>Upcoming bookings</CardDescription></CardHeader>
-                <CardContent><div className="divide-y">
-                  <URow time="10:30 AM" name="Alex M." court="Court 1" type="Member" status="paid" />
-                  <URow time="11:00 AM" name="Sarah L." court="Court 1" type="Standard" status="unpaid" />
-                  <URow time="11:00 AM" name="PB Clinic" court="Court 2" type="Program" status="paid" />
-                  <URow time="11:30 AM" name="Chris B." court="Court 4" type="Standard" status="paid" />
-                </div></CardContent>
-              </Card>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: 'Revenue Today', value: `$${dashTotalRevenue.toLocaleString()}`, change: '↑ 12% vs. last week', positive: true },
+                  { label: 'Bookings Today', value: `${dashTotalBookings}`, change: '↑ 5 vs. last week', positive: true },
+                  { label: 'Utilization', value: '72%', change: '↑ 4%', positive: true },
+                  { label: 'RevPACH', value: '$48/hr', change: '↑ $3', positive: true },
+                ].map((m, i) => (
+                  <div key={i} className="border border-border rounded-lg p-4 bg-card">
+                    <p className="text-[11px] text-muted-foreground font-medium">{m.label}</p>
+                    <p className="text-2xl font-bold mt-1 tabular-nums">{m.value}</p>
+                    <p className={`text-xs font-medium mt-0.5 ${m.positive ? 'text-primary' : 'text-destructive'}`}>{m.change}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-[1fr_420px] gap-6">
+                <div className="space-y-4">
+                  {(dashUnpaid.length > 0 || dashPending.length > 0) && (
+                    <div className="border border-border rounded-lg bg-card">
+                      <div className="px-4 py-3 border-b"><h3 className="text-sm font-bold">Action Items ({dashUnpaid.length + dashPending.length})</h3></div>
+                      <div className="p-3 space-y-2">
+                        {dashUnpaid.length > 0 && <button onClick={() => setBkFilter('unpaid')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 transition-colors text-left"><div className="h-2 w-2 rounded-full bg-destructive shrink-0" /><span className="text-sm font-medium text-destructive">{dashUnpaid.length} Unpaid — ${dashUnpaidTotal}</span></button>}
+                        {dashPending.length > 0 && <button onClick={() => setBkFilter('pending')} className="w-full flex items-center gap-3 px-3 py-2 rounded-md border border-warning/20 bg-warning/5 hover:bg-warning/10 transition-colors text-left"><div className="h-2 w-2 rounded-full bg-warning shrink-0" /><span className="text-sm font-medium text-warning-foreground">{dashPending.length} Pending</span></button>}
+                        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md border border-info/20 bg-info/5 hover:bg-info/10 transition-colors text-left"><div className="h-2 w-2 rounded-full bg-info shrink-0" /><span className="text-sm font-medium text-info">4 Arriving in next 30 min</span></button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="border border-border rounded-lg bg-card">
+                    <div className="px-4 py-3 border-b flex items-center justify-between">
+                      <h3 className="text-sm font-bold">Today&apos;s Bookings ({dashFiltered.length})</h3>
+                      <div className="flex items-center gap-2">
+                        <select value={bkFilter} onChange={e => setBkFilter(e.target.value)} className="h-7 text-[11px] font-semibold rounded-md border border-border bg-background px-2 pr-6 appearance-none cursor-pointer"><option value="all">All Status</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option><option value="pending">Pending</option></select>
+                        <select value={bkCourtFilter} onChange={e => setBkCourtFilter(e.target.value)} className="h-7 text-[11px] font-semibold rounded-md border border-border bg-background px-2 pr-6 appearance-none cursor-pointer"><option value="all">All Courts</option>{dashCourtUtil.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
+                        {(bkFilter !== 'all' || bkCourtFilter !== 'all') && <button onClick={() => { setBkFilter('all'); setBkCourtFilter('all'); }} className="text-[11px] text-muted-foreground hover:text-foreground font-medium">Clear</button>}
+                      </div>
+                    </div>
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2 border-b bg-muted/20 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <span>Time</span><span>Customer</span><span>Court</span><span>Duration</span><span className="text-right">Amount</span><span className="text-right">Status</span>
+                    </div>
+                    {dashUpcoming.length > 0 && (<><div className="px-4 py-1.5 bg-muted/30 border-b"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Upcoming ({dashUpcoming.length})</p></div>
+                      <div className="divide-y">{dashUpcoming.map(b => {
+                        const match = visibleBookings.find(vb => vb.name === b.customer);
+                        return (
+                        <div key={b.id} onClick={() => { if (match) { setSelectedBooking(match); setSelectedCourt(b.court); } }}
+                          className={`grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer ${selectedBooking && match && selectedBooking.id === match.id ? 'bg-primary/5' : ''}`}>
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
+                          <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-right">
+                            {b.status === 'unpaid' && <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[10px] py-0 px-1.5 font-semibold">UNPAID</Badge>}
+                            {b.status === 'pending' && <Badge className="bg-warning/10 text-warning-foreground border border-warning/20 text-[10px] py-0 px-1.5 font-semibold">PENDING</Badge>}
+                            {b.status === 'paid' && <span className="text-sm font-bold text-primary">✓</span>}
+                          </span>
+                        </div>);
+                      })}</div></>)}
+                    {dashVisiblePast.length > 0 && (<><div className="px-4 py-1.5 bg-muted/30 border-b border-t"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Recent ({dashVisiblePast.length})</p></div>
+                      <div className="divide-y">{dashVisiblePast.map(b => {
+                        const match = visibleBookings.find(vb => vb.name === b.customer);
+                        return (
+                        <div key={b.id} onClick={() => { if (match) { setSelectedBooking(match); setSelectedCourt(b.court); } }}
+                          className={`grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-60 ${selectedBooking && match && selectedBooking.id === match.id ? 'opacity-100 bg-primary/5' : ''}`}>
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
+                          <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-right">
+                            {b.checkedIn && <span className="text-sm font-bold text-primary">✓ In</span>}
+                            {b.status === 'paid' && !b.checkedIn && <span className="text-sm font-bold text-primary">✓</span>}
+                          </span>
+                        </div>);
+                      })}</div></>)}
+                    {dashOlderPast.length > 0 && !showAllPast && (
+                      <div className="px-4 py-2.5 border-t">
+                        <button onClick={() => setShowAllPast(true)} className="text-xs text-primary font-semibold hover:underline">Show {dashOlderPast.length} earlier bookings</button>
+                      </div>
+                    )}
+                    {showAllPast && dashOlderPast.length > 0 && (<><div className="px-4 py-1.5 bg-muted/30 border-b border-t"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Earlier ({dashOlderPast.length})</p></div>
+                      <div className="divide-y">{dashOlderPast.map(b => (
+                        <div key={b.id} className="grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-40">
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
+                          <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-right">{b.checkedIn && <span className="text-sm font-bold text-primary">✓ In</span>}</span>
+                        </div>
+                      ))}</div>
+                      <div className="px-4 py-2 border-t"><button onClick={() => setShowAllPast(false)} className="text-xs text-muted-foreground font-medium hover:underline">Hide earlier</button></div>
+                    </>)}
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="border border-border rounded-lg bg-card">
+                    <div className="px-4 py-3 border-b"><h3 className="text-sm font-bold">Court Utilization</h3></div>
+                    <div className="p-4 space-y-3">
+                      {dashCourtUtil.map((c, i) => (
+                        <button key={i} onClick={() => setBkCourtFilter(bkCourtFilter === c.name ? 'all' : c.name)} className={`w-full flex items-center gap-3 transition-colors rounded-sm px-1 py-0.5 ${bkCourtFilter === c.name ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
+                          <span className={`text-xs font-medium w-[64px] shrink-0 text-left ${c.name.includes('4A') || c.name.includes('4B') ? 'pl-3 text-muted-foreground' : 'text-foreground'}`}>{c.name}</span>
+                          <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary/70 rounded-full transition-all" style={{ width: `${c.pct}%` }} /></div>
+                          <span className="text-xs font-bold tabular-nums w-[36px] text-right">{c.pct}%</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* AI Summary */}
+                  <div className="border border-border rounded-lg bg-card">
+                    <div className="px-4 py-3 border-b flex items-center justify-between">
+                      <h3 className="text-sm font-bold">AI Today</h3>
+                      <button onClick={() => setActiveNav('ai')} className="text-[10px] text-primary font-semibold hover:underline">View All →</button>
+                    </div>
+                    <div className="p-4 grid grid-cols-2 gap-3">
+                      <div><p className="text-[10px] text-muted-foreground font-medium">Calls</p><p className="text-lg font-bold">12</p></div>
+                      <div><p className="text-[10px] text-muted-foreground font-medium">AI Revenue</p><p className="text-lg font-bold text-primary">$340</p></div>
+                      <div><p className="text-[10px] text-muted-foreground font-medium">Resolution</p><p className="text-lg font-bold">89%</p></div>
+                      <div><p className="text-[10px] text-muted-foreground font-medium">Bookings Made</p><p className="text-lg font-bold">8</p></div>
+                    </div>
+                  </div>
+                  <div className="border border-border rounded-lg bg-card">
+                    <div className="px-4 py-3 border-b"><h3 className="text-sm font-bold">Recent Activity</h3></div>
+                    <div className="divide-y">
+                      {dashActivity.map((a, i) => (
+                        <div key={i} className="px-4 py-2.5 flex items-start gap-2.5">
+                          <div className={`h-2 w-2 rounded-full mt-1 shrink-0 ${activityDotColor[a.type]}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-foreground font-medium leading-snug">{a.event}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{a.time}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+          {/* Detail panel for dashboard */}
+          {selectedBooking && (
+            <div className="w-80 border-l bg-card shrink-0 flex flex-col overflow-hidden shadow-lg animate-in slide-in-from-right-5 duration-200">
+              <DetailPanel b={selectedBooking} cn={selectedCourt} vsh={vsh} onClose={() => { setSelectedBooking(null); setSelectedCourt(''); }} />
+            </div>
+          )}
+          </div>
         )}
+        </>)}
 
-        </>}
 
         {/* ===== COURTS MANAGEMENT PAGE ===== */}
-        {activeNav === 'courts' && (() => {
-          const courtData = [
-            { name: 'Court 1', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 34, bkgDelta: +6, utilization: 78, utilDelta: +4, indoor: true, revWeek: 1020, capacity: 4, amenities: 'Nets, Lighting' },
-            { name: 'Court 2', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 28, bkgDelta: -2, utilization: 65, utilDelta: -1, indoor: true, revWeek: 840, capacity: 4, amenities: 'Nets, Lighting' },
-            { name: 'Court 3', sport: 'Pickleball', surface: 'Hardwood', status: 'Active' as const, rate: 30, bookings: 31, bkgDelta: +3, utilization: 72, utilDelta: +2, indoor: true, revWeek: 930, capacity: 4, amenities: 'Nets, Lighting' },
-            { name: 'Court 4', sport: 'Tennis', surface: 'Hardcourt', status: 'Active' as const, rate: 45, bookings: 22, bkgDelta: +2, utilization: 58, utilDelta: +3, indoor: true, revWeek: 990, capacity: 4, amenities: 'Net, Lighting, Scoreboard', split: 'Splits → Court 4A, 4B' },
-            { name: 'Court 4A', sport: 'Pickleball', surface: 'Hardcourt', status: 'Active' as const, rate: 30, bookings: 18, bkgDelta: +5, utilization: 45, utilDelta: +7, indoor: true, revWeek: 540, capacity: 4, amenities: 'Nets', parent: 'Sub of Court 4' },
-            { name: 'Court 4B', sport: 'Pickleball', surface: 'Hardcourt', status: 'Active' as const, rate: 30, bookings: 15, bkgDelta: +2, utilization: 40, utilDelta: +5, indoor: true, revWeek: 450, capacity: 4, amenities: 'Nets', parent: 'Sub of Court 4' },
-            { name: 'Court 5', sport: 'Tennis', surface: 'Hardcourt', status: 'Active' as const, rate: 45, bookings: 26, bkgDelta: -1, utilization: 68, utilDelta: -2, indoor: true, revWeek: 1170, capacity: 4, amenities: 'Net, Lighting, Scoreboard' },
-            { name: 'Court 6', sport: 'Basketball / Volleyball', surface: 'Hardwood', status: 'Active' as const, rate: 60, bookings: 20, bkgDelta: +4, utilization: 55, utilDelta: +3, indoor: true, revWeek: 1200, capacity: 12, amenities: 'Hoops, Net, Scoreboard', hours: 'Closes 8:00 PM' },
-          ];
-          const sc = selectedCourtIdx !== null ? courtData[selectedCourtIdx] : null;
-          return (
+        {activeNav === 'courts' && (
           <>
             <div className="h-14 border-b bg-card shrink-0 flex items-center justify-between px-6">
               <h1 className="text-base font-bold text-foreground">Courts</h1>
@@ -831,7 +1005,7 @@ export default function HomePage() {
               {/* Court cards */}
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {courtData.map((court, i) => (
+                  {courtMgmtData.map((court, i) => (
                     <div key={i} onClick={() => { setSelectedCourtIdx(i); setCourtTab('overview'); }}
                       className={`border rounded-lg bg-card hover:shadow-md transition-all cursor-pointer group ${selectedCourtIdx === i ? 'border-primary ring-1 ring-primary/30' : 'border-border hover:border-primary/30'}`}>
                       <div className="p-4">
@@ -873,13 +1047,13 @@ export default function HomePage() {
               </div>
 
               {/* Right-side detail panel */}
-              {sc !== null && (
+              {selectedCourtData !== null && (
                 <div className="w-[520px] border-l bg-card shrink-0 flex flex-col overflow-hidden shadow-lg animate-in slide-in-from-right-5 duration-200">
                   {/* Panel header */}
                   <div className="flex items-center justify-between px-5 h-12 border-b shrink-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-[13px] font-bold">{sc.name}</h3>
-                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 font-semibold rounded-[3px] bg-primary/10 text-primary border-primary/25">{sc.status}</Badge>
+                      <h3 className="text-[13px] font-bold">{selectedCourtData.name}</h3>
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 font-semibold rounded-[3px] bg-primary/10 text-primary border-primary/25">{selectedCourtData.status}</Badge>
                     </div>
                     <button onClick={() => setSelectedCourtIdx(null)} className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                       <X className="h-4 w-4" />
@@ -904,10 +1078,10 @@ export default function HomePage() {
                       <div className="p-5 space-y-4">
                         {/* Quick metrics */}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Bookings</p><p className="text-lg font-bold">{sc.bookings} <span className={`text-xs ${sc.bkgDelta >= 0 ? 'text-primary' : 'text-destructive'}`}>{sc.bkgDelta >= 0 ? '↑' : '↓'}{Math.abs(sc.bkgDelta)}</span></p></div>
-                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Utilization</p><p className="text-lg font-bold">{sc.utilization}% <span className={`text-xs ${sc.utilDelta >= 0 ? 'text-primary' : 'text-destructive'}`}>{sc.utilDelta >= 0 ? '↑' : '↓'}{Math.abs(sc.utilDelta)}%</span></p></div>
-                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Revenue</p><p className="text-lg font-bold">${sc.revWeek.toLocaleString()}</p></div>
-                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Base Rate</p><p className="text-lg font-bold">${sc.rate}/hr</p></div>
+                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Bookings</p><p className="text-lg font-bold">{selectedCourtData.bookings} <span className={`text-xs ${selectedCourtData.bkgDelta >= 0 ? 'text-primary' : 'text-destructive'}`}>{selectedCourtData.bkgDelta >= 0 ? '↑' : '↓'}{Math.abs(selectedCourtData.bkgDelta)}</span></p></div>
+                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Utilization</p><p className="text-lg font-bold">{selectedCourtData.utilization}% <span className={`text-xs ${selectedCourtData.utilDelta >= 0 ? 'text-primary' : 'text-destructive'}`}>{selectedCourtData.utilDelta >= 0 ? '↑' : '↓'}{Math.abs(selectedCourtData.utilDelta)}%</span></p></div>
+                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Revenue</p><p className="text-lg font-bold">${selectedCourtData.revWeek.toLocaleString()}</p></div>
+                          <div className="border border-border rounded-md p-3"><p className="text-[10px] text-muted-foreground">Base Rate</p><p className="text-lg font-bold">${selectedCourtData.rate}/hr</p></div>
                         </div>
 
                         <div className="h-px bg-border" />
@@ -915,18 +1089,18 @@ export default function HomePage() {
                         {/* Editable fields */}
                         <div className="space-y-3">
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Court Details</p>
-                          <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Name</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={sc.name} /></div>
+                          <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Name</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={selectedCourtData.name} /></div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Sport</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={sc.sport} /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Surface</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={sc.surface} /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Sport</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={selectedCourtData.sport} /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Surface</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={selectedCourtData.surface} /></div>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Capacity</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={String(sc.capacity)} /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Environment</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={sc.indoor ? 'Indoor' : 'Outdoor'} /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Capacity</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={String(selectedCourtData.capacity)} /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Environment</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={selectedCourtData.indoor ? 'Indoor' : 'Outdoor'} /></div>
                           </div>
-                          <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Amenities</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={sc.amenities} /></div>
-                          {sc.split && <div className="bg-primary/5 border border-primary/15 rounded-md p-2.5"><p className="text-[11px] font-semibold text-primary">{sc.split}</p></div>}
-                          {sc.parent && <div className="bg-primary/5 border border-primary/15 rounded-md p-2.5"><p className="text-[11px] font-semibold text-primary">{sc.parent}</p></div>}
+                          <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Amenities</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue={selectedCourtData.amenities} /></div>
+                          {selectedCourtData.split && <div className="bg-primary/5 border border-primary/15 rounded-md p-2.5"><p className="text-[11px] font-semibold text-primary">{selectedCourtData.split}</p></div>}
+                          {selectedCourtData.parent && <div className="bg-primary/5 border border-primary/15 rounded-md p-2.5"><p className="text-[11px] font-semibold text-primary">{selectedCourtData.parent}</p></div>}
                         </div>
 
                         <div className="h-px bg-border" />
@@ -940,7 +1114,7 @@ export default function HomePage() {
                       <div className="p-5 space-y-4">
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Base Rate</p>
-                          <input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm font-bold" defaultValue={`$${sc.rate}/hr`} />
+                          <input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm font-bold" defaultValue={`$${selectedCourtData.rate}/hr`} />
                         </div>
 
                         <div className="h-px bg-border" />
@@ -952,9 +1126,9 @@ export default function HomePage() {
                           </div>
                           <div className="border border-border rounded-md divide-y">
                             {[
-                              { window: '8 AM – 12 PM', label: 'Morning', rate: `$${sc.rate}`, mod: 'Base' },
-                              { window: '12 PM – 5 PM', label: 'Afternoon', rate: `$${Math.round(sc.rate * 1.2)}`, mod: '+20%' },
-                              { window: '5 PM – 10 PM', label: 'Prime', rate: `$${Math.round(sc.rate * 1.5)}`, mod: '+50%' },
+                              { window: '8 AM – 12 PM', label: 'Morning', rate: `$${selectedCourtData.rate}`, mod: 'Base' },
+                              { window: '12 PM – 5 PM', label: 'Afternoon', rate: `$${Math.round(selectedCourtData.rate * 1.2)}`, mod: '+20%' },
+                              { window: '5 PM – 10 PM', label: 'Prime', rate: `$${Math.round(selectedCourtData.rate * 1.5)}`, mod: '+50%' },
                             ].map((tw, twi) => (
                               <div key={twi} className="px-3 py-2.5 flex items-center justify-between">
                                 <div><p className="text-xs font-semibold">{tw.label}</p><p className="text-[10px] text-muted-foreground">{tw.window}</p></div>
@@ -1007,9 +1181,9 @@ export default function HomePage() {
                         <div>
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Duration & Buffers</p>
                           <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Min Duration</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue="1 hour" /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Max Duration</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue="3 hours" /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Granularity</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue="30 min" /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Min Duration</label><select className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer" defaultValue="60"><option value="15">15 min</option><option value="30">30 min</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Max Duration</label><select className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer" defaultValue="180"><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Time Granularity</label><select className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer" defaultValue="30"><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option></select></div>
                             <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Turnaround</label><input className="w-full h-8 px-3 rounded-md border border-border bg-background text-sm" defaultValue="10 min" /></div>
                           </div>
                         </div>
@@ -1065,8 +1239,7 @@ export default function HomePage() {
               )}
             </div>
           </>
-          );
-        })()}
+        )}
       </div>
     </div>
   );
@@ -1095,10 +1268,26 @@ function URow({ time, name, court, type, status }: { time: string; name: string;
 function BBlock({ b, cn, vsh, sh, sel, ms, onClick }: { b: Booking; cn: string; vsh: number; sh: number; sel: boolean; ms?: boolean; onClick: () => void }) {
   function accentColor(p: PaymentStatus) {
     switch (p) {
-      case 'paid': return 'bg-primary'; // teal — good condition
-      case 'unpaid': return 'bg-destructive'; // red — needs action
-      case 'pending': return 'bg-warning'; // amber — waiting
-      case 'comp': return 'bg-foreground/25'; // subtle gray
+      case 'paid': return 'bg-primary';
+      case 'unpaid': return 'bg-destructive';
+      case 'pending': return 'bg-warning';
+      case 'comp': return 'bg-foreground/25';
+    }
+  }
+  function borderColor(p: PaymentStatus) {
+    switch (p) {
+      case 'paid': return 'border-primary/40';
+      case 'unpaid': return 'border-destructive/40';
+      case 'pending': return 'border-warning/40';
+      case 'comp': return 'border-foreground/15';
+    }
+  }
+  function borderColorSel(p: PaymentStatus) {
+    switch (p) {
+      case 'paid': return 'border-primary';
+      case 'unpaid': return 'border-destructive';
+      case 'pending': return 'border-warning';
+      case 'comp': return 'border-foreground/30';
     }
   }
   const isMaint = b.type === 'maintenance';
@@ -1111,11 +1300,11 @@ function BBlock({ b, cn, vsh, sh, sel, ms, onClick }: { b: Booking; cn: string; 
   const typeLabel = typeLabels[b.type];
   return (
     <div onClick={onClick}
-      className={`absolute left-px right-px rounded-[2px] border transition-all cursor-pointer overflow-hidden z-10 group/block
+      className={`absolute left-px right-px rounded-[2px] transition-all cursor-pointer overflow-hidden z-10 group/block
         ${isMaint
-          ? 'bg-foreground/[0.08] border-foreground/15 hover:bg-foreground/[0.12] text-muted-foreground'
-          : 'bg-card border-border hover:shadow-sm text-foreground'
-        } ${sel ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+          ? `bg-foreground/[0.08] border-foreground/15 hover:bg-foreground/[0.12] text-muted-foreground border`
+          : `bg-card hover:shadow-sm text-foreground ${sel ? `border-2 ${borderColorSel(b.payment)}` : `border ${borderColor(b.payment)}`}`
+        }`}
       style={{ top, height: h }}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${accentColor(b.payment)}`} />
@@ -1137,8 +1326,8 @@ function BBlock({ b, cn, vsh, sh, sel, ms, onClick }: { b: Booking; cn: string; 
               {b.payment === 'unpaid' && <span className="text-[8px] font-bold text-destructive shrink-0">UNPAID</span>}
               {b.payment === 'pending' && <span className="text-[8px] font-bold text-warning shrink-0">PENDING</span>}
             </div>
-            <p className="text-[10px] text-muted-foreground leading-tight group-hover/block:hidden">{dur}</p>
-            <p className="text-[10px] text-muted-foreground leading-tight hidden group-hover/block:block font-medium">{tr}</p>
+            <p className="text-[10px] text-muted-foreground font-medium leading-tight group-hover/block:hidden">{dur}</p>
+            <p className="text-[10px] text-muted-foreground leading-tight hidden group-hover/block:block font-semibold">{tr}</p>
           </>
         )}
       </div>
@@ -1201,6 +1390,21 @@ function DetailPanel({ b, cn, vsh, onClose }: { b: Booking; cn: string; vsh: num
           {b.source && <DR l="Source" v={b.source} />}
           {b.sport && <DR l="Sport" v={b.sport} />}
         </div>
+
+        {/* Waiver status */}
+        {b.type !== 'maintenance' && (
+          <>
+            <div className="h-px bg-border mx-5" />
+            <div className="px-5 py-3 flex items-center justify-between">
+              <span className="text-[12px] text-muted-foreground">Waiver</span>
+              {b.checkedIn ? (
+                <span className="text-[12px] font-semibold text-primary flex items-center gap-1">✓ Signed</span>
+              ) : (
+                <span className="text-[12px] font-semibold text-warning flex items-center gap-1">⚠ Required</span>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Contact */}
         {(b.phone || b.email) && (

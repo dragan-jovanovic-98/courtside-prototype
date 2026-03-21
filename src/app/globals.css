@@ -85,11 +85,11 @@
    ======================================== */
 :root {
   /* Core */
-  --background: oklch(0.985 0.002 192);      /* Near-white with very subtle teal warmth */
+  --background: oklch(0.975 0.004 80);       /* Warm off-white — slight warmth */
   --foreground: oklch(0.155 0.015 220);      /* Near-black with slight cool undertone */
 
   /* Cards & Popovers */
-  --card: oklch(1 0 0);                      /* Pure white cards */
+  --card: oklch(0.995 0.002 80);             /* Very slightly warm white */
   --card-foreground: oklch(0.155 0.015 220);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.155 0.015 220);
@@ -114,7 +114,7 @@
   --destructive: oklch(0.577 0.245 27.325);
 
   /* Borders & Inputs */
-  --border: oklch(0.915 0.005 220);          /* Light border */
+  --border: oklch(0.895 0.006 220);          /* Slightly stronger border */
   --input: oklch(0.915 0.005 220);
   --ring: oklch(0.62 0.12 192);              /* Focus ring = primary teal */
 
