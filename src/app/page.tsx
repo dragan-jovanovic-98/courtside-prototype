@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Home, CalendarDays, Users, CreditCard, GraduationCap, Trophy,
   UserCog, ShoppingBag, MessageSquare, DoorOpen, BarChart3, Bot,
   Settings, ChevronLeft, ChevronRight, CheckCircle2, Calendar, List, SlidersHorizontal, Search, ChevronDown, X, MoreHorizontal, PanelLeftClose, PanelLeft,
+  ArrowLeft, Phone, Mail, MapPin, Tag, Clock, TrendingUp, TrendingDown, Minus, DollarSign, Activity, FileText, ArrowUpDown, Filter, Download, UserPlus, Eye, Pencil, Send, Ban, Archive, Plus,
 } from "lucide-react";
 
 // ============================================================
@@ -1240,9 +1243,558 @@ export default function HomePage() {
             </div>
           </>
         )}
+
+
+        {/* ===== CUSTOMERS PAGE ===== */}
+        {activeNav === 'customers' && <CustomersView />}
+
       </div>
     </div>
   );
+}
+
+// ============================================================
+// CUSTOMERS VIEW
+// ============================================================
+function CustomersView() {
+  const allCustomers = buildCustomers();
+  const [searchQ, setSearchQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [membershipFilter, setMembershipFilter] = useState<string>('all');
+  const [tagFilter, setTagFilter] = useState<string>('all');
+  const [sortCol, setSortCol] = useState<string>('lastActivity');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [detailTab, setDetailTab] = useState<'overview' | 'bookings' | 'financials' | 'tags' | 'activity'>('overview');
+
+  // Filter & sort
+  const filtered = allCustomers.filter(c => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+    if (membershipFilter !== 'all') {
+      if (membershipFilter === 'none' && c.membershipTier !== null) return false;
+      if (membershipFilter !== 'none' && c.membershipTier !== membershipFilter) return false;
+    }
+    if (tagFilter !== 'all' && !c.tags.some(t => t.name === tagFilter)) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      return `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q);
+    }
+    return true;
+  }).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortCol === 'name') return dir * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+    if (sortCol === 'totalSpend') return dir * (a.totalSpend - b.totalSpend);
+    if (sortCol === 'totalBookings') return dir * (a.totalBookings - b.totalBookings);
+    if (sortCol === 'daysSinceLastVisit') return dir * (a.daysSinceLastVisit - b.daysSinceLastVisit);
+    return dir * (a.lastActivity > b.lastActivity ? 1 : -1);
+  });
+
+  const toggleSort = (col: string) => { if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCol(col); setSortDir('desc'); } };
+  const toggleSelect = (id: string) => { const s = new Set(selectedIds); if (s.has(id)) s.delete(id); else s.add(id); setSelectedIds(s); };
+  const toggleAll = () => { if (selectedIds.size === filtered.length) setSelectedIds(new Set()); else setSelectedIds(new Set(filtered.map(c => c.id))); };
+
+  const allTags = Array.from(new Set(allCustomers.flatMap(c => c.tags.map(t => t.name))));
+
+  // ---- DETAIL VIEW ----
+  if (viewingCustomer) {
+    const c = viewingCustomer;
+    return (
+      <>
+        {/* Header bar */}
+        <div className="h-14 border-b bg-card shrink-0 flex items-center px-6 gap-4">
+          <button onClick={() => { setViewingCustomer(null); setDetailTab('overview'); }} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+          <div className="h-5 w-px bg-border" />
+          <span className="text-sm text-muted-foreground">Customers</span>
+          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm font-semibold">{c.firstName} {c.lastName}</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {/* Profile header */}
+          <div className="px-6 py-5 border-b bg-card">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className={`text-xl font-bold ${c.profileColor}`}>{c.firstName[0]}{c.lastName[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold">{c.firstName} {c.lastName}</h1>
+                    <Badge className={`text-[10px] py-0 border ${STATUS_STYLES[c.status]}`}>{c.status.charAt(0).toUpperCase() + c.status.slice(1)}</Badge>
+                    {c.membershipTier && c.membershipStatus && (
+                      <Badge className={`text-[10px] py-0 border ${MSHIP_STYLES[c.membershipStatus]}`}>{c.membershipTier}{c.membershipStatus === 'trial' ? ' (Trial)' : c.membershipStatus === 'past_due' ? ' (Past Due)' : c.membershipStatus === 'frozen' ? ' (Frozen)' : ''}</Badge>
+                    )}
+                    {!c.waiversCurrent && <Badge className="text-[10px] py-0 border bg-destructive/10 text-destructive border-destructive/20">Waiver Expired</Badge>}
+                  </div>
+                  <div className="flex items-center gap-4 mt-1.5 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{c.email}</span>
+                    <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{c.phone}</span>
+                    {c.city && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{c.city}, {c.province}</span>}
+                  </div>
+                  {c.tags.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      {c.tags.map(t => <Badge key={t.name} className={`text-[10px] py-0 border ${tagStyle(t.name)}`}>{t.displayName}</Badge>)}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold gap-1.5"><Send className="h-3.5 w-3.5" />Message</Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Book</Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold gap-1.5"><Pencil className="h-3.5 w-3.5" />Edit</Button>
+              </div>
+            </div>
+            {/* Key metrics strip */}
+            <div className="flex items-center gap-6 mt-4 pt-3 border-t">
+              <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">LTV</span><p className="text-lg font-bold tabular-nums">${c.totalSpend.toLocaleString()}</p></div>
+              <div className="h-8 w-px bg-border" />
+              <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Bookings</span><p className="text-lg font-bold tabular-nums">{c.totalBookings}</p></div>
+              <div className="h-8 w-px bg-border" />
+              <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Frequency</span><p className="text-lg font-bold tabular-nums">{c.bookingFrequency}</p></div>
+              <div className="h-8 w-px bg-border" />
+              <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Last Visit</span><p className="text-lg font-bold tabular-nums">{c.daysSinceLastVisit === 0 ? 'Today' : c.daysSinceLastVisit === 1 ? 'Yesterday' : `${c.daysSinceLastVisit} days ago`}</p></div>
+              <div className="h-8 w-px bg-border" />
+              <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Churn Risk</span>
+                {c.churnRisk ? <Badge className={`text-[10px] py-0 border mt-0.5 ${CHURN_STYLES[c.churnRisk]}`}>{c.churnRisk.toUpperCase()}</Badge> : <p className="text-lg font-bold text-muted-foreground">—</p>}
+              </div>
+              {c.outstandingBalance > 0 && <><div className="h-8 w-px bg-border" /><div><span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Outstanding</span><p className="text-lg font-bold tabular-nums text-destructive">${c.outstandingBalance.toFixed(2)}</p></div></>}
+              {c.accountCredit > 0 && <><div className="h-8 w-px bg-border" /><div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Credit</span><p className="text-lg font-bold tabular-nums text-success">${c.accountCredit.toFixed(2)}</p></div></>}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="border-b bg-card px-6 flex items-end">
+            {(['overview', 'bookings', 'financials', 'tags', 'activity'] as const).map(tab => (
+              <button key={tab} onClick={() => setDetailTab(tab)}
+                className={`px-4 pb-2.5 pt-3 text-sm font-semibold transition-colors border-b-2 ${detailTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+                {tab === 'overview' ? 'Overview' : tab === 'bookings' ? 'Bookings' : tab === 'financials' ? 'Financials' : tab === 'tags' ? 'Tags' : 'Activity'}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="p-6">
+
+            {/* OVERVIEW TAB */}
+            {detailTab === 'overview' && (
+              <div className="grid grid-cols-3 gap-6">
+                {/* Left column — 2/3 width */}
+                <div className="col-span-2 space-y-6">
+                  {/* Contact info */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Contact Information</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-x-8 gap-y-3">
+                      <CDR l="Email" v={c.email} /><CDR l="Phone" v={c.phone} />
+                      {c.secondaryPhone && <CDR l="Secondary Phone" v={c.secondaryPhone} />}
+                      {c.address && <CDR l="Address" v={`${c.address}, ${c.city}, ${c.province} ${c.postalCode}`} />}
+                      {c.dob && <CDR l="Date of Birth" v={c.dob} />}
+                      {c.gender && <CDR l="Gender" v={c.gender} />}
+                      <CDR l="Source" v={c.source} /><CDR l="Customer Since" v={c.createdAt} />
+                    </CardContent>
+                  </Card>
+
+                  {/* Emergency contact */}
+                  {c.emergencyContact && (
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Emergency Contact</CardTitle></CardHeader>
+                      <CardContent className="grid grid-cols-3 gap-x-8 gap-y-3">
+                        <CDR l="Name" v={c.emergencyContact} /><CDR l="Phone" v={c.emergencyPhone || '—'} /><CDR l="Relationship" v={c.emergencyRelation || '—'} />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Membership */}
+                  {c.membershipTier && (
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Membership</CardTitle></CardHeader>
+                      <CardContent className="grid grid-cols-3 gap-x-8 gap-y-3">
+                        <CDR l="Tier" v={c.membershipTier} /><CDR l="Status" v={c.membershipStatus || '—'} /><CDR l="Since" v={c.membershipSince || '—'} />
+                        <CDR l="Next Billing" v={c.nextBillingDate || '—'} /><CDR l="Price" v={c.membershipPrice ? `$${c.membershipPrice}/month` : '—'} />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Active passes */}
+                  {c.activePasses.length > 0 && (
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Active Passes</CardTitle></CardHeader>
+                      <CardContent>
+                        {c.activePasses.map((p, i) => (
+                          <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                            <div><p className="text-sm font-semibold">{p.name}</p><p className="text-xs text-muted-foreground">Expires: {p.expiry}</p></div>
+                            <Badge variant="outline" className="text-[10px] font-semibold">{p.remaining}</Badge>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Notes */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <CardTitle className="text-sm font-bold">Notes</CardTitle>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] font-semibold gap-1"><Plus className="h-3 w-3" />Add Note</Button>
+                    </CardHeader>
+                    <CardContent>
+                      {c.notes.length === 0 ? <p className="text-sm text-muted-foreground">No notes yet.</p> : c.notes.map((n, i) => (
+                        <div key={i} className="py-2.5 border-b last:border-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold">{n.author}</span>
+                            <span className="text-[10px] text-muted-foreground">{n.date}</span>
+                            <Badge variant="outline" className="text-[9px] py-0">{n.type}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{n.text}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right column — health sidebar */}
+                <div className="space-y-6">
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Health Metrics</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Lifetime Value</span><span className="text-sm font-bold tabular-nums">${c.totalSpend.toLocaleString()}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Total Bookings</span><span className="text-sm font-bold tabular-nums">{c.totalBookings}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Avg Booking Value</span><span className="text-sm font-bold tabular-nums">${c.avgBookingValue.toFixed(2)}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Booking Frequency</span><span className="text-sm font-bold tabular-nums">{c.bookingFrequency}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Days Since Last Visit</span><span className="text-sm font-bold tabular-nums">{c.daysSinceLastVisit}</span></div>
+                      <Separator />
+                      <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground">Churn Risk</span>
+                        {c.churnRisk ? <Badge className={`text-[10px] py-0 border ${CHURN_STYLES[c.churnRisk]}`}>{c.churnRisk.toUpperCase()}</Badge> : <span className="text-sm text-muted-foreground">—</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Play Profile</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Preferred Sport</span><span className="text-sm font-semibold">{c.preferredSport}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Preferred Court</span><span className="text-sm font-semibold">{c.preferredCourt}</span></div>
+                      <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Preferred Time</span><span className="text-sm font-semibold">{c.preferredTime}</span></div>
+                    </CardContent>
+                  </Card>
+
+                  {c.household && (
+                    <Card className="shadow-sm">
+                      <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Household</CardTitle></CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Household</span><span className="text-sm font-semibold">{c.household}</span></div>
+                        <div className="flex justify-between items-baseline"><span className="text-xs text-muted-foreground">Role</span><Badge variant="outline" className="text-[10px] py-0">{c.householdRole === 'primary' ? 'Primary' : 'Member'}</Badge></div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Waivers</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Status</span>
+                        <Badge className={`text-[10px] py-0 border ${c.waiversCurrent ? 'bg-success/10 text-success border-success/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+                          {c.waiversCurrent ? 'Current' : 'Expired'}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* BOOKINGS TAB */}
+            {detailTab === 'bookings' && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-bold">Booking History</CardTitle>
+                  <Button size="sm" className="h-8 text-xs font-semibold gap-1.5"><Plus className="h-3.5 w-3.5" />Create Booking</Button>
+                </CardHeader>
+                <CardContent>
+                  <table className="w-full">
+                    <thead><tr className="border-b">
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Date</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Time</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Court</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Sport</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Type</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
+                      <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Status</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-border/50">
+                      {c.bookings.map(b => (
+                        <tr key={b.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 text-sm">{b.date}</td>
+                          <td className="py-2.5 text-sm text-muted-foreground">{b.time}</td>
+                          <td className="py-2.5 text-sm">{b.court}</td>
+                          <td className="py-2.5 text-sm text-muted-foreground">{b.sport}</td>
+                          <td className="py-2.5 text-xs text-muted-foreground">{b.type}</td>
+                          <td className="py-2.5 text-sm text-right tabular-nums">{b.amount > 0 ? `$${b.amount.toFixed(2)}` : '—'}</td>
+                          <td className="py-2.5 text-right">
+                            <Badge className={`text-[10px] py-0 border ${b.status === 'completed' ? 'bg-success/10 text-success border-success/20' : b.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : b.status === 'cancelled' ? 'bg-muted text-muted-foreground border-border' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+                              {b.status === 'no-show' ? 'No-Show' : b.status.charAt(0).toUpperCase() + b.status.slice(1)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* FINANCIALS TAB */}
+            {detailTab === 'financials' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-4 gap-4">
+                  <Card className="shadow-sm"><CardContent className="pt-4 pb-3"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Spend</p><p className="text-2xl font-bold tabular-nums mt-0.5">${c.totalSpend.toLocaleString()}</p></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="pt-4 pb-3"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Outstanding</p><p className={`text-2xl font-bold tabular-nums mt-0.5 ${c.outstandingBalance > 0 ? 'text-destructive' : ''}`}>${c.outstandingBalance.toFixed(2)}</p></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="pt-4 pb-3"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Account Credit</p><p className={`text-2xl font-bold tabular-nums mt-0.5 ${c.accountCredit > 0 ? 'text-success' : ''}`}>${c.accountCredit.toFixed(2)}</p></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="pt-4 pb-3"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Transaction</p><p className="text-2xl font-bold tabular-nums mt-0.5">${c.avgBookingValue.toFixed(2)}</p></CardContent></Card>
+                </div>
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Transaction History</CardTitle></CardHeader>
+                  <CardContent>
+                    {c.transactions.length === 0 ? <p className="text-sm text-muted-foreground">No transactions recorded.</p> : (
+                    <table className="w-full">
+                      <thead><tr className="border-b">
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Date</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Description</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Type</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Method</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
+                        <th className="pb-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Status</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-border/50">
+                        {c.transactions.map(t => (
+                          <tr key={t.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2.5 text-sm">{t.date}</td>
+                            <td className="py-2.5 text-sm">{t.description}</td>
+                            <td className="py-2.5"><Badge variant="outline" className="text-[10px] py-0">{t.type.charAt(0).toUpperCase() + t.type.slice(1)}</Badge></td>
+                            <td className="py-2.5 text-sm text-muted-foreground">{t.method}</td>
+                            <td className={`py-2.5 text-sm text-right tabular-nums font-semibold ${t.amount < 0 ? 'text-destructive' : ''}`}>{t.amount < 0 ? `−$${Math.abs(t.amount).toFixed(2)}` : `$${t.amount.toFixed(2)}`}</td>
+                            <td className="py-2.5 text-right">
+                              <Badge className={`text-[10px] py-0 border ${t.status === 'completed' ? 'bg-success/10 text-success border-success/20' : t.status === 'pending' ? 'bg-warning/10 text-warning-foreground border-warning/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+                                {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>)}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* TAGS TAB */}
+            {detailTab === 'tags' && (
+              <div className="space-y-6">
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-bold">Active Tags</CardTitle>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] font-semibold gap-1"><Plus className="h-3 w-3" />Assign Tag</Button>
+                  </CardHeader>
+                  <CardContent>
+                    {c.tags.length === 0 ? <p className="text-sm text-muted-foreground">No tags assigned.</p> : (
+                    <div className="space-y-2">
+                      {c.tags.map(t => (
+                        <div key={t.name} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                          <div className="flex items-center gap-3">
+                            <Badge className={`text-[10px] py-0.5 px-2.5 border ${tagStyle(t.name)}`}>{t.displayName}</Badge>
+                            <Badge variant="outline" className="text-[9px] py-0 text-muted-foreground">{t.category}</Badge>
+                          </div>
+                          <button className="text-muted-foreground hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>)}
+                  </CardContent>
+                </Card>
+                {c.tags.length > 0 && (
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Effect Summary</CardTitle></CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        This customer&apos;s active tags provide:{' '}
+                        {c.tags.some(t => t.name === 'founding-member') && <strong>15% off court bookings, </strong>}
+                        {c.tags.some(t => t.name === 'gold-member') && <strong>14-day advance booking, prime time access, 2 guest passes/month, </strong>}
+                        {c.tags.some(t => t.name === 'silver-member') && <strong>7-day advance booking, </strong>}
+                        {c.tags.some(t => t.name === 'junior-athlete') && <strong>25% off courts, 50% off programs, </strong>}
+                        {c.tags.some(t => t.name === 'senior-discount') && <strong>10% off all bookings, </strong>}
+                        {c.tags.some(t => t.name === 'coach') && <strong>recurring booking allowed, 3-hour max, approval bypass, </strong>}
+                        {c.tags.some(t => t.name === 'acme-corp') && <strong>corporate charge-to-account billing, </strong>}
+                        {c.tags.some(t => t.name === 'win-back-20') && <strong>20% off (30-day promo), </strong>}
+                        {c.tags.some(t => t.name === 'frequent-player') && <strong>loyalty recognition, </strong>}
+                        {c.tags.some(t => t.name === 'lapsed') && <strong>win-back campaign eligible, </strong>}
+                        {c.tags.some(t => t.name === 'no-show-flagged') && <strong>no-show review required, </strong>}
+                        {c.tags.some(t => t.category === 'custom' && !['founding-member', 'gold-member', 'silver-member', 'junior-athlete', 'senior-discount', 'coach', 'acme-corp', 'win-back-20', 'frequent-player', 'lapsed', 'no-show-flagged'].includes(t.name)) && <strong>sport preference tracked.</strong>}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* ACTIVITY TAB */}
+            {detailTab === 'activity' && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Activity Timeline</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-0">
+                    {c.activities.map((a, i) => (
+                      <div key={a.id} className="flex items-start gap-3 py-3 border-b last:border-0">
+                        <div className="flex flex-col items-center mt-0.5">
+                          <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${ACTIVITY_ICONS[a.type] || 'bg-muted-foreground'}`} />
+                          {i < c.activities.length - 1 && <div className="w-px h-full bg-border mt-1" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">{a.description}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{a.date} at {a.time}</span>
+                            <span className="text-[10px] text-muted-foreground">·</span>
+                            <span className="text-[10px] text-muted-foreground">{a.actor}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ---- LIST VIEW ----
+  return (
+    <>
+      {/* Header */}
+      <div className="h-14 border-b bg-card shrink-0 flex items-center justify-between px-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-base font-bold text-foreground">Customers</h1>
+          <Badge variant="outline" className="text-[10px] font-semibold">{filtered.length} total</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-8 text-xs font-semibold gap-1.5"><Download className="h-3.5 w-3.5" />Export</Button>
+          <Button size="sm" className="h-8 text-xs font-semibold gap-1.5"><UserPlus className="h-3.5 w-3.5" />Add Customer</Button>
+        </div>
+      </div>
+
+      {/* Toolbar: search + filters */}
+      <div className="shrink-0 border-b bg-card px-6 h-12 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <input type="text" placeholder="Search by name, email, or phone..." value={searchQ} onChange={e => setSearchQ(e.target.value)}
+              className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-72 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-8 px-3 rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground appearance-none cursor-pointer pr-6">
+            <option value="all">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option>
+          </select>
+          <select value={membershipFilter} onChange={e => setMembershipFilter(e.target.value)} className="h-8 px-3 rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground appearance-none cursor-pointer pr-6">
+            <option value="all">All Memberships</option><option value="Gold">Gold</option><option value="Silver">Silver</option><option value="none">No Membership</option>
+          </select>
+          <select value={tagFilter} onChange={e => setTagFilter(e.target.value)} className="h-8 px-3 rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground appearance-none cursor-pointer pr-6">
+            <option value="all">All Tags</option>
+            {allTags.map(t => <option key={t} value={t}>{t.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</option>)}
+          </select>
+        </div>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">{selectedIds.size} selected</span>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] font-semibold gap-1"><Tag className="h-3 w-3" />Assign Tag</Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] font-semibold gap-1"><Send className="h-3 w-3" />Message</Button>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 overflow-y-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-card z-10">
+            <tr className="border-b">
+              <th className="w-10 px-4 py-2.5"><Checkbox checked={selectedIds.size === filtered.length && filtered.length > 0} onCheckedChange={toggleAll} /></th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                <span className="flex items-center gap-1">Name <ArrowUpDown className="h-3 w-3" /></span>
+              </th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Contact</th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Status</th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Membership</th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Tags</th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right cursor-pointer select-none" onClick={() => toggleSort('totalBookings')}>
+                <span className="flex items-center justify-end gap-1">Bookings <ArrowUpDown className="h-3 w-3" /></span>
+              </th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right cursor-pointer select-none" onClick={() => toggleSort('totalSpend')}>
+                <span className="flex items-center justify-end gap-1">LTV <ArrowUpDown className="h-3 w-3" /></span>
+              </th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left cursor-pointer select-none" onClick={() => toggleSort('daysSinceLastVisit')}>
+                <span className="flex items-center gap-1">Last Visit <ArrowUpDown className="h-3 w-3" /></span>
+              </th>
+              <th className="py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-left">Risk</th>
+              <th className="w-10"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/50">
+            {filtered.map(c => (
+              <tr key={c.id} className="hover:bg-muted/30 cursor-pointer transition-colors group" onClick={() => setViewingCustomer(c)}>
+                <td className="px-4 py-2.5" onClick={e => { e.stopPropagation(); toggleSelect(c.id); }}>
+                  <Checkbox checked={selectedIds.has(c.id)} />
+                </td>
+                <td className="py-2.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className={`text-xs font-bold ${c.profileColor}`}>{c.firstName[0]}{c.lastName[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-semibold">{c.firstName} {c.lastName}</p>
+                      <p className="text-[10px] text-muted-foreground">{c.source} · {c.createdAt}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-2.5">
+                  <p className="text-xs text-muted-foreground">{c.email}</p>
+                  <p className="text-[10px] text-muted-foreground">{c.phone}</p>
+                </td>
+                <td className="py-2.5"><Badge className={`text-[10px] py-0 border ${STATUS_STYLES[c.status]}`}>{c.status.charAt(0).toUpperCase() + c.status.slice(1)}</Badge></td>
+                <td className="py-2.5">
+                  {c.membershipTier ? (
+                    <div>
+                      <span className="text-xs font-semibold">{c.membershipTier}</span>
+                      {c.membershipStatus && c.membershipStatus !== 'active' && <Badge className={`text-[9px] py-0 border ml-1.5 ${MSHIP_STYLES[c.membershipStatus]}`}>{c.membershipStatus === 'past_due' ? 'Past Due' : c.membershipStatus.charAt(0).toUpperCase() + c.membershipStatus.slice(1)}</Badge>}
+                    </div>
+                  ) : <span className="text-xs text-muted-foreground">—</span>}
+                </td>
+                <td className="py-2.5">
+                  <div className="flex items-center gap-1 flex-wrap max-w-[200px]">
+                    {c.tags.slice(0, 2).map(t => <Badge key={t.name} className={`text-[9px] py-0 border ${tagStyle(t.name)}`}>{t.displayName}</Badge>)}
+                    {c.tags.length > 2 && <Badge variant="outline" className="text-[9px] py-0">+{c.tags.length - 2}</Badge>}
+                    {c.tags.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                  </div>
+                </td>
+                <td className="py-2.5 text-right"><span className="text-sm tabular-nums font-medium">{c.totalBookings}</span></td>
+                <td className="py-2.5 text-right"><span className="text-sm tabular-nums font-medium">${c.totalSpend.toLocaleString()}</span></td>
+                <td className="py-2.5"><span className="text-xs text-muted-foreground">{c.daysSinceLastVisit === 0 ? 'Today' : c.daysSinceLastVisit === 1 ? 'Yesterday' : `${c.daysSinceLastVisit}d ago`}</span></td>
+                <td className="py-2.5">
+                  {c.churnRisk ? <Badge className={`text-[9px] py-0 border ${CHURN_STYLES[c.churnRisk]}`}>{c.churnRisk.toUpperCase()}</Badge> : <span className="text-xs text-muted-foreground">—</span>}
+                </td>
+                <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function CDR({ l, v }: { l: string; v: string }) {
+  return <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{l}</span><p className="text-sm mt-0.5">{v}</p></div>;
 }
 
 // ============================================================
@@ -1477,3 +2029,206 @@ function DR({ l, v }: { l: string; v: string }) {
 function LegendItem({ bgColor, borderColor, accentColor, label }: { bgColor: string; borderColor: string; accentColor: string; label: string }) {
   return <div className="flex items-center gap-1.5"><div className={`h-3.5 w-6 rounded-[2px] border ${bgColor} ${borderColor} relative overflow-hidden`}><div className={`absolute left-0 top-0 bottom-0 w-1.5 ${accentColor}`} /></div><span className="text-[11px] text-muted-foreground font-medium">{label}</span></div>;
 }
+
+// ============================================================
+// CUSTOMERS — TYPES & DATA
+// ============================================================
+type CustomerStatus = 'active' | 'inactive' | 'suspended' | 'archived';
+type ChurnRisk = 'low' | 'medium' | 'high' | null;
+type MembershipStatus = 'active' | 'trial' | 'past_due' | 'frozen' | 'cancelled' | null;
+
+interface CustomerTag {
+  name: string;
+  displayName: string;
+  color: string;
+  category: 'pricing' | 'access' | 'membership' | 'corporate' | 'behavioral' | 'custom';
+}
+
+interface CustomerBooking {
+  id: string;
+  date: string;
+  time: string;
+  court: string;
+  sport: string;
+  type: string;
+  duration: string;
+  amount: number;
+  status: 'completed' | 'upcoming' | 'cancelled' | 'no-show';
+  paymentStatus: 'paid' | 'unpaid' | 'pending' | 'refunded' | 'comp';
+}
+
+interface CustomerTransaction {
+  id: string;
+  date: string;
+  description: string;
+  type: 'payment' | 'refund' | 'credit' | 'invoice';
+  amount: number;
+  method: string;
+  status: 'completed' | 'pending' | 'failed';
+  reference?: string;
+}
+
+interface CustomerActivity {
+  id: string;
+  date: string;
+  time: string;
+  type: 'booking' | 'payment' | 'membership' | 'tag' | 'checkin' | 'communication' | 'note' | 'profile';
+  description: string;
+  actor: string;
+}
+
+interface Customer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  secondaryPhone?: string;
+  status: CustomerStatus;
+  profileColor: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  dob?: string;
+  gender?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  emergencyRelation?: string;
+  source: string;
+  createdAt: string;
+  lastActivity: string;
+  // membership
+  membershipTier: string | null;
+  membershipStatus: MembershipStatus;
+  membershipSince?: string;
+  nextBillingDate?: string;
+  membershipPrice?: number;
+  // passes
+  activePasses: { name: string; remaining: string; expiry: string }[];
+  // tags
+  tags: CustomerTag[];
+  // health
+  totalBookings: number;
+  totalSpend: number;
+  avgBookingValue: number;
+  bookingFrequency: string;
+  daysSinceLastVisit: number;
+  churnRisk: ChurnRisk;
+  preferredSport: string;
+  preferredCourt: string;
+  preferredTime: string;
+  // household
+  household?: string;
+  householdRole?: 'primary' | 'member';
+  // waivers
+  waiversCurrent: boolean;
+  // CRM
+  outstandingBalance: number;
+  accountCredit: number;
+  // notes
+  notes: { date: string; author: string; type: string; text: string }[];
+  // bookings
+  bookings: CustomerBooking[];
+  // transactions
+  transactions: CustomerTransaction[];
+  // activity
+  activities: CustomerActivity[];
+}
+
+const TAG_COLORS: Record<string, string> = {
+  'founding-member': 'bg-primary/15 text-primary border-primary/25',
+  'gold-member': 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700',
+  'silver-member': 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600',
+  'junior-athlete': 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700',
+  'senior-discount': 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700',
+  'coach': 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+  'acme-corp': 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700',
+  'frequent-player': 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700',
+  'high-value': 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
+  'lapsed': 'bg-destructive/10 text-destructive border-destructive/20',
+  'pickleball': 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-700',
+  'no-show-flagged': 'bg-destructive/10 text-destructive border-destructive/20',
+  'win-back-20': 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700',
+  'comp-access': 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700',
+};
+function tagStyle(name: string) { return TAG_COLORS[name] || 'bg-muted text-muted-foreground border-border'; }
+
+const AVATAR_COLORS = ['bg-primary/15 text-primary', 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'];
+
+function buildCustomers(): Customer[] {
+  const customers: Customer[] = [
+    {
+      id: 'C001', firstName: 'Jane', lastName: 'Doe', email: 'jane.doe@email.com', phone: '+1 (647) 555-1234', status: 'active', profileColor: AVATAR_COLORS[0],
+      source: 'Online', createdAt: 'Jan 15, 2025', lastActivity: 'Mar 20, 2026', address: '45 King St W', city: 'Markham', province: 'ON', postalCode: 'L3P 1A1', dob: 'Apr 12, 1990', gender: 'Female',
+      emergencyContact: 'John Doe', emergencyPhone: '+1 (647) 555-1235', emergencyRelation: 'Spouse',
+      membershipTier: 'Gold', membershipStatus: 'active', membershipSince: 'Mar 1, 2025', nextBillingDate: 'Apr 1, 2026', membershipPrice: 99,
+      activePasses: [{ name: '10-Visit Pass', remaining: '7 of 10', expiry: 'Jun 30, 2026' }],
+      tags: [
+        { name: 'founding-member', displayName: 'Founding Member', color: 'primary', category: 'pricing' },
+        { name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' },
+        { name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' },
+      ],
+      totalBookings: 142, totalSpend: 8450, avgBookingValue: 59.51, bookingFrequency: '1.8/week', daysSinceLastVisit: 1, churnRisk: 'low',
+      preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Evenings (6–9 PM)',
+      household: 'Doe Family', householdRole: 'primary', waiversCurrent: true, outstandingBalance: 0, accountCredit: 45.00,
+      notes: [
+        { date: 'Mar 18, 2026', author: 'Sarah M.', type: 'general', text: 'Interested in joining the spring pickleball league. Follow up when registration opens.' },
+        { date: 'Feb 2, 2026', author: 'System', type: 'follow_up', text: 'Membership renewed successfully. Gold tier, $99/month.' },
+      ],
+      bookings: [
+        { id: 'B001', date: 'Mar 20, 2026', time: '8:00 AM – 9:00 AM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' },
+        { id: 'B002', date: 'Mar 22, 2026', time: '7:00 PM – 8:30 PM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '90 min', amount: 67.50, status: 'upcoming', paymentStatus: 'paid' },
+        { id: 'B003', date: 'Mar 17, 2026', time: '6:00 PM – 7:00 PM', court: 'Court 1', sport: 'Pickleball', type: 'Recurring', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' },
+        { id: 'B004', date: 'Mar 14, 2026', time: '7:00 PM – 8:00 PM', court: 'Court 3', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' },
+        { id: 'B005', date: 'Mar 10, 2026', time: '8:00 AM – 9:30 AM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '90 min', amount: 67.50, status: 'completed', paymentStatus: 'paid' },
+        { id: 'B006', date: 'Feb 28, 2026', time: '6:00 PM – 7:00 PM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'cancelled', paymentStatus: 'refunded' },
+      ],
+      transactions: [
+        { id: 'T001', date: 'Mar 20, 2026', description: 'Court 1 — Pickleball', type: 'payment', amount: 45, method: 'Visa •4242', status: 'completed', reference: 'B001' },
+        { id: 'T002', date: 'Mar 22, 2026', description: 'Court 2 — Pickleball', type: 'payment', amount: 67.50, method: 'Visa •4242', status: 'completed', reference: 'B002' },
+        { id: 'T003', date: 'Mar 1, 2026', description: 'Gold Membership — March', type: 'payment', amount: 99, method: 'Visa •4242', status: 'completed' },
+        { id: 'T004', date: 'Feb 28, 2026', description: 'Cancellation refund — Court 2', type: 'refund', amount: -45, method: 'Account Credit', status: 'completed', reference: 'B006' },
+        { id: 'T005', date: 'Feb 1, 2026', description: 'Gold Membership — February', type: 'payment', amount: 99, method: 'Visa •4242', status: 'completed' },
+        { id: 'T006', date: 'Jan 20, 2026', description: '10-Visit Pass', type: 'payment', amount: 350, method: 'Visa •4242', status: 'completed' },
+      ],
+      activities: [
+        { id: 'A001', date: 'Mar 20', time: '9:02 AM', type: 'checkin', description: 'Checked in — Court 1, Pickleball', actor: 'System' },
+        { id: 'A002', date: 'Mar 20', time: '8:00 AM', type: 'booking', description: 'Booking completed — Court 1, 8:00–9:00 AM', actor: 'Jane Doe' },
+        { id: 'A003', date: 'Mar 18', time: '3:15 PM', type: 'note', description: 'Staff note added by Sarah M.', actor: 'Sarah M.' },
+        { id: 'A004', date: 'Mar 17', time: '7:01 PM', type: 'checkin', description: 'Checked in — Court 1, Pickleball', actor: 'System' },
+        { id: 'A005', date: 'Mar 17', time: '10:30 AM', type: 'communication', description: 'Booking reminder sent — email', actor: 'System' },
+        { id: 'A006', date: 'Mar 14', time: '7:03 PM', type: 'checkin', description: 'Checked in — Court 3, Pickleball', actor: 'System' },
+        { id: 'A007', date: 'Mar 10', time: '8:05 AM', type: 'checkin', description: 'Checked in — Court 1, Pickleball', actor: 'System' },
+        { id: 'A008', date: 'Mar 1', time: '12:00 AM', type: 'membership', description: 'Membership renewed — Gold, $99.00', actor: 'System' },
+        { id: 'A009', date: 'Mar 1', time: '12:00 AM', type: 'payment', description: 'Payment processed — $99.00, Visa •4242', actor: 'System' },
+        { id: 'A010', date: 'Feb 28', time: '4:30 PM', type: 'booking', description: 'Booking cancelled — Court 2, 6:00–7:00 PM. Refund: $45 to credit.', actor: 'Jane Doe' },
+      ],
+    },
+    { id: 'C002', firstName: 'Alex', lastName: 'Martinez', email: 'alex.m@gmail.com', phone: '+1 (905) 555-2345', status: 'active', profileColor: AVATAR_COLORS[1], source: 'Phone (AI)', createdAt: 'Jun 8, 2025', lastActivity: 'Mar 19, 2026', membershipTier: 'Silver', membershipStatus: 'active', membershipSince: 'Jul 1, 2025', nextBillingDate: 'Apr 8, 2026', membershipPrice: 59, activePasses: [], tags: [{ name: 'silver-member', displayName: 'Silver Member', color: 'slate', category: 'membership' }, { name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' }, { name: 'frequent-player', displayName: 'Frequent Player', color: 'orange', category: 'behavioral' }], totalBookings: 87, totalSpend: 4230, avgBookingValue: 48.62, bookingFrequency: '2.1/week', daysSinceLastVisit: 2, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 2', preferredTime: 'Mornings (8–11 AM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'B101', date: 'Mar 19, 2026', time: '9:00 AM – 10:30 AM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '90 min', amount: 52.50, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T101', date: 'Mar 19, 2026', description: 'Court 2 — Pickleball', type: 'payment', amount: 52.50, method: 'Mastercard •8910', status: 'completed' }], activities: [{ id: 'AA01', date: 'Mar 19', time: '9:05 AM', type: 'checkin', description: 'Checked in — Court 2', actor: 'System' }] },
+    { id: 'C003', firstName: 'Sarah', lastName: 'Chen', email: 'sarah.chen@outlook.com', phone: '+1 (416) 555-3456', status: 'active', profileColor: AVATAR_COLORS[2], source: 'Walk-in', createdAt: 'Sep 22, 2025', lastActivity: 'Mar 20, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: 'Monthly Unlimited', remaining: 'Unlimited', expiry: 'Mar 31, 2026' }], tags: [{ name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' }, { name: 'high-value', displayName: 'High Value', color: 'yellow', category: 'behavioral' }], totalBookings: 64, totalSpend: 5120, avgBookingValue: 80.00, bookingFrequency: '1.5/week', daysSinceLastVisit: 1, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 3', preferredTime: 'Afternoons (2–5 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 120.00, notes: [{ date: 'Mar 5, 2026', author: 'Mike R.', type: 'general', text: 'Prefers Court 3 — quieter end of facility. VIP treatment.' }], bookings: [{ id: 'B201', date: 'Mar 20, 2026', time: '2:00 PM – 3:30 PM', court: 'Court 3', sport: 'Pickleball', type: 'Standard', duration: '90 min', amount: 0, status: 'completed', paymentStatus: 'comp' }], transactions: [{ id: 'T201', date: 'Mar 15, 2026', description: 'Monthly Unlimited Pass', type: 'payment', amount: 200, method: 'Visa •5678', status: 'completed' }], activities: [{ id: 'AB01', date: 'Mar 20', time: '2:05 PM', type: 'checkin', description: 'Checked in — Court 3', actor: 'System' }] },
+    { id: 'C004', firstName: 'Tom', lastName: 'Kim', email: 'tom.kim@email.com', phone: '+1 (647) 555-4567', status: 'active', profileColor: AVATAR_COLORS[3], source: 'Online', createdAt: 'Nov 3, 2025', lastActivity: 'Mar 18, 2026', membershipTier: 'Gold', membershipStatus: 'active', membershipSince: 'Dec 1, 2025', nextBillingDate: 'Apr 3, 2026', membershipPrice: 99, activePasses: [], tags: [{ name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' }, { name: 'coach', displayName: 'Coach', color: 'blue', category: 'access' }], totalBookings: 56, totalSpend: 3890, avgBookingValue: 69.46, bookingFrequency: '1.2/week', daysSinceLastVisit: 3, churnRisk: 'low', preferredSport: 'Tennis', preferredCourt: 'Court 5', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'B301', date: 'Mar 18, 2026', time: '6:00 PM – 8:00 PM', court: 'Court 5', sport: 'Tennis', type: 'Recurring', duration: '120 min', amount: 90, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T301', date: 'Mar 18, 2026', description: 'Court 5 — Tennis (Recurring)', type: 'payment', amount: 90, method: 'Visa •3456', status: 'completed' }], activities: [{ id: 'AC01', date: 'Mar 18', time: '6:02 PM', type: 'checkin', description: 'Checked in — Court 5', actor: 'System' }] },
+    { id: 'C005', firstName: 'Emma', lastName: 'Singh', email: 'emma.s@yahoo.com', phone: '+1 (905) 555-5678', status: 'active', profileColor: AVATAR_COLORS[4], source: 'Online', createdAt: 'Feb 14, 2026', lastActivity: 'Mar 15, 2026', membershipTier: null, membershipStatus: null, activePasses: [], tags: [{ name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' }], totalBookings: 8, totalSpend: 360, avgBookingValue: 45.00, bookingFrequency: '0.7/week', daysSinceLastVisit: 6, churnRisk: 'medium', preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Weekends', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'B401', date: 'Mar 15, 2026', time: '10:00 AM – 11:00 AM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T401', date: 'Mar 15, 2026', description: 'Court 1 — Pickleball', type: 'payment', amount: 45, method: 'Apple Pay', status: 'completed' }], activities: [{ id: 'AD01', date: 'Mar 15', time: '10:03 AM', type: 'checkin', description: 'Checked in — Court 1', actor: 'System' }] },
+    { id: 'C006', firstName: 'Mike', lastName: 'Russo', email: 'mike.russo@corp.com', phone: '+1 (416) 555-6789', status: 'active', profileColor: AVATAR_COLORS[5], source: 'Staff', createdAt: 'Aug 1, 2025', lastActivity: 'Mar 20, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: 'Corporate 50-Visit', remaining: '31 of 50', expiry: 'Aug 1, 2026' }], tags: [{ name: 'acme-corp', displayName: 'Acme Corp', color: 'emerald', category: 'corporate' }, { name: 'frequent-player', displayName: 'Frequent Player', color: 'orange', category: 'behavioral' }], totalBookings: 94, totalSpend: 0, avgBookingValue: 0, bookingFrequency: '2.4/week', daysSinceLastVisit: 1, churnRisk: 'low', preferredSport: 'Basketball', preferredCourt: 'Court 6', preferredTime: 'Lunch (12–2 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [{ date: 'Aug 1, 2025', author: 'Admin', type: 'general', text: 'Corporate account — Acme Corp. All bookings charged to corporate pass.' }], bookings: [{ id: 'B501', date: 'Mar 20, 2026', time: '12:00 PM – 1:00 PM', court: 'Court 6', sport: 'Basketball', type: 'Standard', duration: '60 min', amount: 0, status: 'completed', paymentStatus: 'comp' }], transactions: [], activities: [{ id: 'AE01', date: 'Mar 20', time: '12:03 PM', type: 'checkin', description: 'Checked in — Court 6', actor: 'System' }] },
+    { id: 'C007', firstName: 'Lisa', lastName: 'Park', email: 'lisa.park@email.com', phone: '+1 (647) 555-7890', status: 'active', profileColor: AVATAR_COLORS[6], source: 'Online', createdAt: 'Dec 10, 2025', lastActivity: 'Mar 12, 2026', membershipTier: 'Gold', membershipStatus: 'past_due', membershipSince: 'Jan 1, 2026', nextBillingDate: 'Overdue', membershipPrice: 99, activePasses: [], tags: [{ name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' }], totalBookings: 24, totalSpend: 1870, avgBookingValue: 77.92, bookingFrequency: '0.8/week', daysSinceLastVisit: 9, churnRisk: 'medium', preferredSport: 'Tennis', preferredCourt: 'Court 4', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 99, accountCredit: 0, notes: [{ date: 'Mar 12, 2026', author: 'System', type: 'follow_up', text: 'Payment failed — Visa •9012 declined. Dunning day 3 email sent.' }], bookings: [{ id: 'B601', date: 'Mar 12, 2026', time: '7:00 PM – 8:30 PM', court: 'Court 4', sport: 'Tennis', type: 'Standard', duration: '90 min', amount: 67.50, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T601', date: 'Mar 1, 2026', description: 'Gold Membership — March (FAILED)', type: 'payment', amount: 99, method: 'Visa •9012', status: 'failed' }], activities: [{ id: 'AF01', date: 'Mar 12', time: '7:04 PM', type: 'checkin', description: 'Checked in — Court 4', actor: 'System' }, { id: 'AF02', date: 'Mar 5', time: '8:00 AM', type: 'communication', description: 'Dunning email sent — day 3 retry', actor: 'System' }, { id: 'AF03', date: 'Mar 1', time: '12:00 AM', type: 'payment', description: 'Payment failed — Gold Membership $99, Visa •9012 declined', actor: 'System' }] },
+    { id: 'C008', firstName: 'David', lastName: 'Wright', email: 'david.w@gmail.com', phone: '+1 (905) 555-8901', status: 'inactive', profileColor: AVATAR_COLORS[7], source: 'Online', createdAt: 'Mar 5, 2025', lastActivity: 'Jan 8, 2026', membershipTier: null, membershipStatus: null, activePasses: [], tags: [{ name: 'lapsed', displayName: 'Lapsed', color: 'red', category: 'behavioral' }], totalBookings: 32, totalSpend: 1440, avgBookingValue: 45.00, bookingFrequency: '0/week', daysSinceLastVisit: 72, churnRisk: 'high', preferredSport: 'Pickleball', preferredCourt: 'Court 2', preferredTime: 'Weekends', waiversCurrent: false, outstandingBalance: 0, accountCredit: 25.00, notes: [{ date: 'Feb 15, 2026', author: 'System', type: 'follow_up', text: 'Auto-tagged as lapsed — no booking in 60+ days. Win-back campaign queued.' }], bookings: [{ id: 'B701', date: 'Jan 8, 2026', time: '10:00 AM – 11:00 AM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T701', date: 'Jan 8, 2026', description: 'Court 2 — Pickleball', type: 'payment', amount: 45, method: 'Google Pay', status: 'completed' }], activities: [{ id: 'AG01', date: 'Feb 15', time: '12:00 AM', type: 'tag', description: 'Tag auto-assigned: Lapsed (60+ days no booking)', actor: 'System' }, { id: 'AG02', date: 'Feb 15', time: '8:00 AM', type: 'communication', description: 'Win-back email sent — 20% off promo code', actor: 'AI Marketing' }] },
+    { id: 'C009', firstName: 'Rachel', lastName: 'Gomez', email: 'rachel.g@email.com', phone: '+1 (416) 555-9012', status: 'active', profileColor: AVATAR_COLORS[0], source: 'Online', createdAt: 'Jan 20, 2026', lastActivity: 'Mar 19, 2026', membershipTier: 'Gold', membershipStatus: 'trial', membershipSince: 'Mar 1, 2026', nextBillingDate: 'Mar 31, 2026', membershipPrice: 99, activePasses: [], tags: [{ name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' }], totalBookings: 12, totalSpend: 540, avgBookingValue: 45.00, bookingFrequency: '1.5/week', daysSinceLastVisit: 2, churnRisk: null, preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Mornings (8–11 AM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'B801', date: 'Mar 19, 2026', time: '8:00 AM – 9:00 AM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'T801', date: 'Mar 19, 2026', description: 'Court 1 — Pickleball', type: 'payment', amount: 45, method: 'Visa •7890', status: 'completed' }], activities: [{ id: 'AH01', date: 'Mar 19', time: '8:03 AM', type: 'checkin', description: 'Checked in — Court 1', actor: 'System' }] },
+    { id: 'C010', firstName: 'Kevin', lastName: 'Nguyen', email: 'kevin.n@email.com', phone: '+1 (647) 555-0123', status: 'active', profileColor: AVATAR_COLORS[1], source: 'Phone (AI)', createdAt: 'Oct 15, 2025', lastActivity: 'Mar 20, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: '10-Visit Pass', remaining: '2 of 10', expiry: 'Apr 15, 2026' }], tags: [{ name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' }], totalBookings: 38, totalSpend: 1710, avgBookingValue: 45.00, bookingFrequency: '1.0/week', daysSinceLastVisit: 1, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 2', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'B901', date: 'Mar 20, 2026', time: '7:00 PM – 8:00 PM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'upcoming', paymentStatus: 'paid' }], transactions: [{ id: 'T901', date: 'Mar 20, 2026', description: 'Court 2 — Pickleball', type: 'payment', amount: 45, method: 'Visa •2345', status: 'completed' }], activities: [{ id: 'AI01', date: 'Mar 20', time: '7:00 PM', type: 'booking', description: 'Booking created — Court 2, 7:00–8:00 PM', actor: 'Kevin Nguyen' }] },
+    { id: 'C011', firstName: 'Priya', lastName: 'Patel', email: 'priya.p@email.com', phone: '+1 (905) 555-1122', status: 'active', profileColor: AVATAR_COLORS[2], source: 'Online', createdAt: 'May 20, 2025', lastActivity: 'Mar 20, 2026', membershipTier: 'Silver', membershipStatus: 'active', membershipSince: 'Jun 1, 2025', nextBillingDate: 'Apr 20, 2026', membershipPrice: 59, activePasses: [], tags: [{ name: 'silver-member', displayName: 'Silver Member', color: 'slate', category: 'membership' }, { name: 'junior-athlete', displayName: 'Junior Athlete', color: 'violet', category: 'pricing' }], totalBookings: 72, totalSpend: 2880, avgBookingValue: 40.00, bookingFrequency: '1.6/week', daysSinceLastVisit: 1, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Afternoons (2–5 PM)', dob: 'Jul 15, 2008', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BA01', date: 'Mar 20, 2026', time: '3:00 PM – 4:00 PM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 33.75, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TA01', date: 'Mar 20, 2026', description: 'Court 1 — Pickleball (Junior 25% off)', type: 'payment', amount: 33.75, method: 'Visa •6789', status: 'completed' }], activities: [{ id: 'AJ01', date: 'Mar 20', time: '3:02 PM', type: 'checkin', description: 'Checked in — Court 1', actor: 'System' }] },
+    { id: 'C012', firstName: 'James', lastName: 'O\'Brien', email: 'james.ob@email.com', phone: '+1 (416) 555-2233', status: 'suspended', profileColor: AVATAR_COLORS[3], source: 'Online', createdAt: 'Apr 10, 2025', lastActivity: 'Feb 20, 2026', membershipTier: 'Gold', membershipStatus: 'frozen', membershipSince: 'May 1, 2025', activePasses: [], tags: [{ name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' }, { name: 'no-show-flagged', displayName: 'No-Show Flagged', color: 'red', category: 'behavioral' }], totalBookings: 45, totalSpend: 3150, avgBookingValue: 70.00, bookingFrequency: '0/week', daysSinceLastVisit: 29, churnRisk: 'high', preferredSport: 'Tennis', preferredCourt: 'Court 5', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 198, accountCredit: 0, notes: [{ date: 'Feb 20, 2026', author: 'Admin', type: 'complaint', text: 'Suspended after 4 no-shows in 30 days. Outstanding balance of $198. Contact to resolve.' }], bookings: [{ id: 'BB01', date: 'Feb 20, 2026', time: '7:00 PM – 8:30 PM', court: 'Court 5', sport: 'Tennis', type: 'Standard', duration: '90 min', amount: 67.50, status: 'no-show', paymentStatus: 'paid' }], transactions: [], activities: [{ id: 'AK01', date: 'Feb 20', time: '9:00 PM', type: 'booking', description: 'No-show recorded — Court 5, 7:00–8:30 PM', actor: 'System' }, { id: 'AK02', date: 'Feb 20', time: '9:01 PM', type: 'tag', description: 'Tag auto-assigned: No-Show Flagged (4 no-shows in 30 days)', actor: 'System' }] },
+    { id: 'C013', firstName: 'Olivia', lastName: 'Brown', email: 'olivia.b@email.com', phone: '+1 (647) 555-3344', status: 'active', profileColor: AVATAR_COLORS[4], source: 'Walk-in', createdAt: 'Mar 18, 2026', lastActivity: 'Mar 18, 2026', membershipTier: null, membershipStatus: null, activePasses: [], tags: [], totalBookings: 1, totalSpend: 45, avgBookingValue: 45.00, bookingFrequency: '—', daysSinceLastVisit: 3, churnRisk: null, preferredSport: 'Pickleball', preferredCourt: 'Court 3', preferredTime: '—', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [{ date: 'Mar 18, 2026', author: 'Front Desk', type: 'general', text: 'Walk-in first-timer. Seemed interested in regular play.' }], bookings: [{ id: 'BC01', date: 'Mar 18, 2026', time: '11:00 AM – 12:00 PM', court: 'Court 3', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TC01', date: 'Mar 18, 2026', description: 'Court 3 — Pickleball', type: 'payment', amount: 45, method: 'Apple Pay', status: 'completed' }], activities: [{ id: 'AL01', date: 'Mar 18', time: '11:00 AM', type: 'booking', description: 'Walk-in booking — Court 3, Pickleball', actor: 'Front Desk' }, { id: 'AL02', date: 'Mar 18', time: '11:00 AM', type: 'profile', description: 'Customer created — Walk-in registration', actor: 'Front Desk' }] },
+    { id: 'C014', firstName: 'Ryan', lastName: 'Lee', email: 'ryan.lee@acme.com', phone: '+1 (905) 555-4455', status: 'active', profileColor: AVATAR_COLORS[5], source: 'Staff', createdAt: 'Aug 15, 2025', lastActivity: 'Mar 19, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: 'Corporate 50-Visit', remaining: '28 of 50', expiry: 'Aug 15, 2026' }], tags: [{ name: 'acme-corp', displayName: 'Acme Corp', color: 'emerald', category: 'corporate' }], totalBookings: 41, totalSpend: 0, avgBookingValue: 0, bookingFrequency: '1.3/week', daysSinceLastVisit: 2, churnRisk: 'low', preferredSport: 'Basketball', preferredCourt: 'Court 6', preferredTime: 'Lunch (12–2 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BD01', date: 'Mar 19, 2026', time: '12:30 PM – 1:30 PM', court: 'Court 6', sport: 'Basketball', type: 'Standard', duration: '60 min', amount: 0, status: 'completed', paymentStatus: 'comp' }], transactions: [], activities: [{ id: 'AM01', date: 'Mar 19', time: '12:33 PM', type: 'checkin', description: 'Checked in — Court 6', actor: 'System' }] },
+    { id: 'C015', firstName: 'Maria', lastName: 'Santos', email: 'maria.s@email.com', phone: '+1 (416) 555-5566', status: 'active', profileColor: AVATAR_COLORS[6], source: 'Online', createdAt: 'Jul 1, 2025', lastActivity: 'Mar 16, 2026', membershipTier: 'Silver', membershipStatus: 'active', membershipSince: 'Jul 15, 2025', nextBillingDate: 'Apr 1, 2026', membershipPrice: 59, activePasses: [], tags: [{ name: 'silver-member', displayName: 'Silver Member', color: 'slate', category: 'membership' }, { name: 'senior-discount', displayName: 'Senior Discount', color: 'rose', category: 'pricing' }], totalBookings: 55, totalSpend: 2475, avgBookingValue: 45.00, bookingFrequency: '1.3/week', daysSinceLastVisit: 5, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Mornings (8–11 AM)', dob: 'Feb 14, 1958', waiversCurrent: true, outstandingBalance: 0, accountCredit: 15.00, notes: [], bookings: [{ id: 'BE01', date: 'Mar 16, 2026', time: '9:00 AM – 10:00 AM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 40.50, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TE01', date: 'Mar 16, 2026', description: 'Court 1 — Pickleball (Senior 10% off)', type: 'payment', amount: 40.50, method: 'Mastercard •3344', status: 'completed' }], activities: [{ id: 'AN01', date: 'Mar 16', time: '9:02 AM', type: 'checkin', description: 'Checked in — Court 1', actor: 'System' }] },
+    { id: 'C016', firstName: 'Chris', lastName: 'Taylor', email: 'chris.t@email.com', phone: '+1 (647) 555-6677', status: 'active', profileColor: AVATAR_COLORS[7], source: 'Online', createdAt: 'Jan 5, 2026', lastActivity: 'Mar 13, 2026', membershipTier: null, membershipStatus: null, activePasses: [], tags: [{ name: 'win-back-20', displayName: 'Win-Back 20%', color: 'pink', category: 'pricing' }], totalBookings: 15, totalSpend: 675, avgBookingValue: 45.00, bookingFrequency: '0.4/week', daysSinceLastVisit: 8, churnRisk: 'medium', preferredSport: 'Pickleball', preferredCourt: 'Court 2', preferredTime: 'Weekends', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BF01', date: 'Mar 13, 2026', time: '2:00 PM – 3:00 PM', court: 'Court 2', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 36, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TF01', date: 'Mar 13, 2026', description: 'Court 2 — Pickleball (Win-Back 20% off)', type: 'payment', amount: 36, method: 'Visa •1122', status: 'completed' }], activities: [{ id: 'AO01', date: 'Mar 13', time: '2:02 PM', type: 'checkin', description: 'Checked in — Court 2', actor: 'System' }] },
+    { id: 'C017', firstName: 'Anika', lastName: 'Sharma', email: 'anika.s@email.com', phone: '+1 (905) 555-7788', status: 'active', profileColor: AVATAR_COLORS[0], source: 'Online', createdAt: 'Feb 1, 2026', lastActivity: 'Mar 20, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: 'Day Pass', remaining: 'Valid today', expiry: 'Mar 20, 2026' }], tags: [], totalBookings: 5, totalSpend: 275, avgBookingValue: 55.00, bookingFrequency: '0.6/week', daysSinceLastVisit: 1, churnRisk: null, preferredSport: 'Volleyball', preferredCourt: 'Court 6', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BG01', date: 'Mar 20, 2026', time: '6:00 PM – 7:30 PM', court: 'Court 6', sport: 'Volleyball', type: 'Standard', duration: '90 min', amount: 55, status: 'upcoming', paymentStatus: 'paid' }], transactions: [{ id: 'TG01', date: 'Mar 20, 2026', description: 'Day Pass', type: 'payment', amount: 55, method: 'Visa •4455', status: 'completed' }], activities: [{ id: 'AP01', date: 'Mar 20', time: '9:00 AM', type: 'payment', description: 'Day Pass purchased — $55', actor: 'Anika Sharma' }] },
+    { id: 'C018', firstName: 'Brandon', lastName: 'Fisher', email: 'brandon.f@email.com', phone: '+1 (416) 555-8899', status: 'active', profileColor: AVATAR_COLORS[1], source: 'Online', createdAt: 'Sep 1, 2025', lastActivity: 'Mar 19, 2026', membershipTier: 'Gold', membershipStatus: 'active', membershipSince: 'Oct 1, 2025', nextBillingDate: 'Apr 1, 2026', membershipPrice: 99, activePasses: [], tags: [{ name: 'gold-member', displayName: 'Gold Member', color: 'amber', category: 'membership' }, { name: 'founding-member', displayName: 'Founding Member', color: 'primary', category: 'pricing' }, { name: 'frequent-player', displayName: 'Frequent Player', color: 'orange', category: 'behavioral' }], totalBookings: 118, totalSpend: 7080, avgBookingValue: 60.00, bookingFrequency: '2.0/week', daysSinceLastVisit: 2, churnRisk: 'low', preferredSport: 'Tennis', preferredCourt: 'Court 5', preferredTime: 'Mornings (8–11 AM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 80.00, notes: [], bookings: [{ id: 'BH01', date: 'Mar 19, 2026', time: '8:00 AM – 10:00 AM', court: 'Court 5', sport: 'Tennis', type: 'Recurring', duration: '120 min', amount: 76.50, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TH01', date: 'Mar 19, 2026', description: 'Court 5 — Tennis (Founding 15% off)', type: 'payment', amount: 76.50, method: 'Amex •0011', status: 'completed' }], activities: [{ id: 'AQ01', date: 'Mar 19', time: '8:02 AM', type: 'checkin', description: 'Checked in — Court 5', actor: 'System' }] },
+    { id: 'C019', firstName: 'Nicole', lastName: 'Adams', email: 'nicole.a@email.com', phone: '+1 (647) 555-9900', status: 'active', profileColor: AVATAR_COLORS[2], source: 'Walk-in', createdAt: 'Mar 1, 2026', lastActivity: 'Mar 17, 2026', membershipTier: null, membershipStatus: null, activePasses: [], tags: [], totalBookings: 3, totalSpend: 135, avgBookingValue: 45.00, bookingFrequency: '0.5/week', daysSinceLastVisit: 4, churnRisk: null, preferredSport: 'Pickleball', preferredCourt: 'Court 3', preferredTime: 'Afternoons (2–5 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BI01', date: 'Mar 17, 2026', time: '2:00 PM – 3:00 PM', court: 'Court 3', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'completed', paymentStatus: 'paid' }], transactions: [{ id: 'TI01', date: 'Mar 17, 2026', description: 'Court 3 — Pickleball', type: 'payment', amount: 45, method: 'Apple Pay', status: 'completed' }], activities: [{ id: 'AR01', date: 'Mar 17', time: '2:03 PM', type: 'checkin', description: 'Checked in — Court 3', actor: 'System' }] },
+    { id: 'C020', firstName: 'Daniel', lastName: 'Harris', email: 'dan.h@email.com', phone: '+1 (905) 555-0011', status: 'active', profileColor: AVATAR_COLORS[3], source: 'Online', createdAt: 'Nov 20, 2025', lastActivity: 'Mar 20, 2026', membershipTier: null, membershipStatus: null, activePasses: [{ name: '10-Visit Pass', remaining: '5 of 10', expiry: 'May 20, 2026' }], tags: [{ name: 'pickleball', displayName: 'Pickleball', color: 'lime', category: 'custom' }], totalBookings: 28, totalSpend: 1260, avgBookingValue: 45.00, bookingFrequency: '1.0/week', daysSinceLastVisit: 1, churnRisk: 'low', preferredSport: 'Pickleball', preferredCourt: 'Court 1', preferredTime: 'Evenings (6–9 PM)', waiversCurrent: true, outstandingBalance: 0, accountCredit: 0, notes: [], bookings: [{ id: 'BJ01', date: 'Mar 20, 2026', time: '6:00 PM – 7:00 PM', court: 'Court 1', sport: 'Pickleball', type: 'Standard', duration: '60 min', amount: 45, status: 'upcoming', paymentStatus: 'paid' }], transactions: [{ id: 'TJ01', date: 'Mar 20, 2026', description: 'Court 1 — Pickleball', type: 'payment', amount: 45, method: 'Visa •6677', status: 'completed' }], activities: [{ id: 'AS01', date: 'Mar 20', time: '5:45 PM', type: 'booking', description: 'Booking created — Court 1, 6:00–7:00 PM', actor: 'Daniel Harris' }] },
+  ];
+  return customers;
+}
+
+const CHURN_STYLES: Record<string, string> = { low: 'bg-success/10 text-success border-success/20', medium: 'bg-warning/10 text-warning-foreground border-warning/20', high: 'bg-destructive/10 text-destructive border-destructive/20' };
+const STATUS_STYLES: Record<string, string> = { active: 'bg-success/10 text-success border-success/20', inactive: 'bg-muted text-muted-foreground border-border', suspended: 'bg-destructive/10 text-destructive border-destructive/20', archived: 'bg-muted text-muted-foreground border-border' };
+const MSHIP_STYLES: Record<string, string> = { active: 'bg-success/10 text-success border-success/20', trial: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700', past_due: 'bg-destructive/10 text-destructive border-destructive/20', frozen: 'bg-warning/10 text-warning-foreground border-warning/20', cancelled: 'bg-muted text-muted-foreground border-border' };
+const ACTIVITY_ICONS: Record<string, string> = { booking: 'bg-primary', payment: 'bg-success', membership: 'bg-amber-500', tag: 'bg-violet-500', checkin: 'bg-blue-500', communication: 'bg-orange-500', note: 'bg-slate-400', profile: 'bg-cyan-500' };
