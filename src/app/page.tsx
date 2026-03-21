@@ -321,7 +321,7 @@ export default function HomePage() {
         <div className="h-14 flex items-center border-b px-3">
           {sidebarCollapsed ? (
             <div className="flex items-center justify-center w-full">
-              <Image src="/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7" />
+              <img src="/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7" />
             </div>
           ) : (
             <div className="flex items-center gap-2.5">

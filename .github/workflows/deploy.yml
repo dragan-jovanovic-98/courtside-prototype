@@ -26,6 +26,27 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Configure Next.js for GitHub Pages
+        run: |
+          cat > next.config.ts << 'CONF'
+          import type { NextConfig } from "next";
+
+          const nextConfig: NextConfig = {
+            output: "export",
+            basePath: "/courtside-prototype",
+            images: {
+              unoptimized: true,
+            },
+          };
+
+          export default nextConfig;
+          CONF
+
+      - name: Prefix static asset paths with basePath
+        run: |
+          find src -name '*.tsx' -exec sed -i 's|src="/courtside-logo.svg"|src="/courtside-prototype/courtside-logo.svg"|g' {} +
+
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

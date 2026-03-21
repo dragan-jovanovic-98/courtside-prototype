@@ -16,8 +16,8 @@ export default function DesignSystemPage() {
       <header className="border-b bg-card sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image
-              src="/courtside-prototype/courtside-logo.svg"
+            <img
+              src="/courtside-logo.svg"
               alt="Courtside AI"
               width={28}
               height={28}
