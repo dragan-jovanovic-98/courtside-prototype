@@ -594,13 +594,13 @@ export default function HomePage() {
                             <div key={ci} className="relative">
                               {/* Closed range overlays */}
                               {getClosedRanges(ci).map((range, ri) => (
-                                <div key={`closed-${ri}`} className="absolute left-0 right-0 z-[2] group cursor-default flex items-center justify-center bg-foreground/[0.18] border border-foreground/15" style={{ top: range.start * SLOT_HEIGHT, height: (range.end - range.start) * SLOT_HEIGHT }}>
-                                  <span className="hidden group-hover:block text-xs text-muted-foreground font-semibold select-none tracking-wider uppercase bg-background/70 px-3 py-1 rounded shadow-sm">Closed</span>
+                                <div key={`closed-${ri}`} className="absolute left-0 right-0 z-[2] group cursor-not-allowed flex items-center justify-center bg-foreground/[0.18] border border-foreground/15" style={{ top: range.start * SLOT_HEIGHT, height: (range.end - range.start) * SLOT_HEIGHT }}>
+                                  <span className="hidden group-hover:block text-[10px] text-muted-foreground font-semibold select-none bg-background/70 px-2 py-0.5 rounded">Closed</span>
                                 </div>
                               ))}
-                              {/* Dependency lockout — solid gray like unavailable */}
+                              {/* Dependency lockout — solid gray like closed */}
                               {mergedLockouts.map((lr, li) => (
-                                <div key={`lock-${li}`} className="absolute left-0 right-0 z-[3] bg-foreground/[0.12] border-y border-foreground/10 cursor-not-allowed group/lk flex items-center justify-center"
+                                <div key={`lock-${li}`} className="absolute left-0 right-0 z-[3] bg-foreground/[0.18] border border-foreground/15 cursor-not-allowed group/lk flex items-center justify-center"
                                   style={{ top: lr.start * SLOT_HEIGHT, height: (lr.end - lr.start) * SLOT_HEIGHT }}>
                                   <span className="hidden group-hover/lk:block text-[10px] text-muted-foreground font-semibold select-none bg-background/70 px-2 py-0.5 rounded">
                                     {isParent ? 'Sub-court booked' : `${courts[court.parentIndex!].name} booked`}
@@ -613,7 +613,7 @@ export default function HomePage() {
                                 if (isLockedAt(si)) return null;
                                 if (visibleBookings.some(b => b.court === ci && si >= b.startSlot && si < b.startSlot + b.duration)) return null;
                                 const unbookable = isUnbookable(ci, si);
-                                if (unbookable) return <div key={si} className="absolute left-0 right-0 bg-foreground/[0.12] border-y border-foreground/10 cursor-not-allowed group/ub flex items-center justify-center z-[2]" style={{ top: si * SLOT_HEIGHT, height: SLOT_HEIGHT }}><span className="hidden group-hover/ub:block text-[10px] text-muted-foreground font-semibold select-none bg-background/70 px-2 py-0.5 rounded">Too short</span></div>;
+                                if (unbookable) return <div key={si} className="absolute left-0 right-0 bg-foreground/[0.18] border border-foreground/15 cursor-not-allowed group/ub flex items-center justify-center z-[2]" style={{ top: si * SLOT_HEIGHT, height: SLOT_HEIGHT }}><span className="hidden group-hover/ub:block text-[10px] text-muted-foreground font-semibold select-none bg-background/70 px-2 py-0.5 rounded">Too short</span></div>;
                                 return <div key={si} className="absolute left-0 right-0 hover:bg-primary/[0.06] transition-colors cursor-pointer z-[1] group flex items-center justify-center" style={{ top: si * SLOT_HEIGHT, height: SLOT_HEIGHT }}><span className="hidden group-hover:block text-[10px] text-muted-foreground/60 font-medium select-none">{slotTime(si, vsh)}</span></div>;
                               })}
                               {visibleBookings.filter(b => b.court === ci).map(b => (
@@ -1854,7 +1854,7 @@ function BBlock({ b, cn, vsh, sh, sel, ms, onClick }: { b: Booking; cn: string; 
     <div onClick={onClick}
       className={`absolute left-px right-px rounded-[2px] transition-all cursor-pointer overflow-hidden z-10 group/block
         ${isMaint
-          ? `bg-foreground/[0.08] border-foreground/15 hover:bg-foreground/[0.12] text-muted-foreground border`
+          ? `bg-[oklch(0.90_0.006_220)] border-[oklch(0.65_0.015_220)] hover:bg-[oklch(0.87_0.006_220)] text-muted-foreground border`
           : `bg-card hover:shadow-sm text-foreground ${sel ? `border-2 ${borderColorSel(b.payment)}` : `border ${borderColor(b.payment)}`}`
         }`}
       style={{ top, height: h }}

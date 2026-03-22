@@ -242,11 +242,11 @@ export default function CourtGridPage() {
       <div className="flex items-center gap-4 px-5 py-1.5 border-b bg-card shrink-0">
         <LegendItem bgColor="bg-primary/25" borderColor="border-primary/40" accentColor="bg-primary" label="Customer Booking" />
         <LegendItem bgColor="bg-info/25" borderColor="border-info/40" accentColor="bg-info" label="Facility Activity" />
-        <LegendItem bgColor="bg-foreground/[0.12]" borderColor="border-foreground/20" accentColor="bg-foreground/40" label="Blocked" />
+        <LegendItem bgColor="bg-foreground/[0.15]" borderColor="border-foreground/25" accentColor="bg-foreground/50" label="Blocked" />
         <div className="h-3 w-px bg-border" />
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-5 rounded-sm relative overflow-hidden border border-destructive/25" style={{ background: 'linear-gradient(rgba(220,38,38,0.06), rgba(220,38,38,0.06)), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(220,38,38,0.18) 2px, rgba(220,38,38,0.18) 4px)' }} />
-          <span className="text-[10px] text-muted-foreground">Unbookable Gap</span>
+          <div className="h-3 w-5 rounded-sm bg-foreground/[0.18] border border-foreground/15" />
+          <span className="text-[10px] text-muted-foreground">Unavailable</span>
         </div>
       </div>
 
@@ -347,17 +347,13 @@ export default function CourtGridPage() {
                             return (
                               <div
                                 key={slotIndex}
-                                className="absolute left-0 right-0 cursor-not-allowed group/ub flex items-center justify-center"
+                                className="absolute left-0 right-0 z-[2] cursor-not-allowed group/ub flex items-center justify-center bg-foreground/[0.18] border-y border-foreground/15"
                                 style={{
                                   top: slotIndex * SLOT_HEIGHT,
                                   height: SLOT_HEIGHT,
-                                  background: `
-                                    linear-gradient(rgba(220,38,38,0.06), rgba(220,38,38,0.06)),
-                                    repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(220,38,38,0.18) 2px, rgba(220,38,38,0.18) 4px)
-                                  `,
                                 }}
                               >
-                                <span className="hidden group-hover/ub:block text-[10px] text-destructive/70 font-semibold select-none">
+                                <span className="hidden group-hover/ub:block text-[10px] text-muted-foreground font-semibold select-none">
                                   Too short
                                 </span>
                               </div>
@@ -440,7 +436,7 @@ function BookingBlock({ booking, courtName, viewStartHour, isSelected, onClick }
       case 'program': case 'league': case 'openplay': case 'event':
         return { bg: 'bg-info/25', hover: 'hover:bg-info/35', border: 'border-info/40', text: 'text-info', accent: 'bg-info' };
       case 'maintenance':
-        return { bg: 'bg-foreground/[0.12]', hover: 'hover:bg-foreground/[0.16]', border: 'border-foreground/20', text: 'text-muted-foreground', accent: 'bg-foreground/40' };
+        return { bg: 'bg-foreground/[0.15]', hover: 'hover:bg-foreground/[0.20]', border: 'border-foreground/25', text: 'text-muted-foreground', accent: 'bg-foreground/50' };
     }
   }
 
