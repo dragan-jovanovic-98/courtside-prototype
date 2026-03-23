@@ -159,7 +159,7 @@ function slotToShortTime(slot: number): string {
 
 const TOTAL_SLOTS = (FACILITY.closeHour - FACILITY.openHour) * 2;
 const MIN_BOOKING_SLOTS = FACILITY.minBookingMinutes / 30;
-const SLOT_HEIGHT = 28; // px per 30-min slot — compact for 13" screens
+const SLOT_HEIGHT = 32; // px per 30-min slot
 
 // Court counts per sport
 function getCourtCounts(): Record<string, number> {
@@ -758,7 +758,10 @@ export default function BookingPortal() {
                             style={{ gridColumn: 1, gridRow: slotIdx + 1 }}
                           >
                             {isHourBoundary && (
-                              <span className="absolute -top-[6px] left-1.5 text-[9px] font-medium text-muted-foreground tabular-nums bg-background px-0.5 z-[1]">
+                              <span
+                                className="absolute left-1.5 text-[9px] font-medium text-muted-foreground tabular-nums z-[1]"
+                                style={{ top: `${SLOT_HEIGHT - 6}px` }}
+                              >
                                 {slotToShortTime(slotIdx)}
                               </span>
                             )}
@@ -1093,8 +1096,8 @@ export default function BookingPortal() {
                   </Card>
                 </div>
 
-                {/* Right column — price summary (sticky) */}
-                <div className="lg:col-span-2">
+                {/* Right column — price summary (sticky on desktop, hidden on mobile — shown as bottom bar instead) */}
+                <div className="lg:col-span-2 hidden lg:block">
                   <div className="lg:sticky lg:top-6 space-y-5">
                     <Card className="shadow-sm">
                       <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Price Breakdown</CardTitle></CardHeader>
@@ -1162,6 +1165,35 @@ export default function BookingPortal() {
                     </p>
                   </div>
                 </div>
+
+                {/* Mobile-only: inline price summary before sticky bar */}
+                <div className="lg:hidden space-y-3 pb-24">
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Price Breakdown</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">{selectedCourt.name} — {selectedDuration} min</span><span className="tabular-nums font-medium">${basePrice.toFixed(2)}</span></div>
+                      {Object.entries(addOns).filter(([, qty]) => qty > 0).map(([id, qty]) => { const addon = COURT_ADDONS.find(a => a.id === id); return addon ? <div key={id} className="flex justify-between text-sm"><span className="text-muted-foreground">{addon.name} × {qty}</span><span className="tabular-nums font-medium">${(addon.price * qty).toFixed(2)}</span></div> : null; })}
+                      {showPromoInput ? (
+                        <div className="pt-1"><div className="flex gap-2"><input value={promoCode} onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); }} placeholder="Promo code" className="flex-1 h-8 px-3 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" /><Button size="sm" variant="outline" className="h-8 text-[10px] font-semibold px-3" onClick={() => { if (promoCode === 'WELCOME20') setPromoApplied(true); }}>Apply</Button></div>{promoApplied && <p className="text-[10px] text-success mt-1 font-semibold">WELCOME20 applied — 20% off!</p>}</div>
+                      ) : <button onClick={() => setShowPromoInput(true)} className="text-xs font-semibold text-primary hover:underline pt-1">Have a promo code?</button>}
+                      {promoApplied && <div className="flex justify-between text-sm"><span className="text-success">Promo (20%)</span><span className="tabular-nums font-medium text-success">−${promoDiscount.toFixed(2)}</span></div>}
+                      <Separator />
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums font-medium">${subtotal.toFixed(2)}</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">{FACILITY.taxLabel}</span><span className="tabular-nums font-medium">${tax.toFixed(2)}</span></div>
+                      <Separator />
+                      <div className="flex justify-between text-base font-bold"><span>Total</span><span className="tabular-nums">${total.toFixed(2)}</span></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Mobile sticky checkout bar */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] p-4 safe-area-bottom">
+                <div className="flex items-center justify-between mb-2">
+                  <div><span className="text-xs text-muted-foreground font-medium">Total Due</span><div className="text-lg font-bold tabular-nums">${total.toFixed(2)}</div></div>
+                  <Button className="h-11 px-6 text-sm font-bold" disabled={!allAgreed} onClick={handleConfirm}>Confirm Booking</Button>
+                </div>
+                <p className="text-[9px] text-center text-muted-foreground">Secure payment by Stripe</p>
               </div>
             </div>
           )}
@@ -1287,12 +1319,37 @@ export default function BookingPortal() {
         </main>
       </div>
 
-      {/* ===== BOOKING MODAL (Redesigned) ===== */}
+      {/* ===== MOBILE BOTTOM TAB BAR (logged-in only, md:hidden) ===== */}
+      {isLoggedIn && (
+        <nav className="md:hidden shrink-0 border-t bg-card flex items-center justify-around py-1.5 safe-area-bottom z-30" role="navigation" aria-label="Mobile navigation">
+          {[
+            { id: 'book', label: 'Book', icon: CalendarDays },
+            { id: 'bookings', label: 'Bookings', icon: Ticket },
+            { id: 'programs', label: 'Programs', icon: GraduationCap },
+            { id: 'payments', label: 'Payments', icon: CreditCard },
+            { id: 'profile', label: 'Profile', icon: UserCircle },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const active = activePortalNav === tab.id || (tab.id === 'book' && activePortalNav === 'book');
+            return (
+              <button key={tab.id} onClick={() => { setActivePortalNav(tab.id); if (tab.id === 'book') { setView('grid'); setSelectedSlot(null); } }}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.6} />
+                <span className={`text-[10px] ${active ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* ===== BOOKING MODAL (Bottom sheet on mobile, centered modal on desktop) ===== */}
       {showBookingModal && modalCourtId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => setShowBookingModal(false)} />
-          <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-md mx-4 animate-in zoom-in-95 fade-in duration-200">
-            <div className="p-6">
+          <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-md md:mx-4 animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200 max-h-[90vh] overflow-y-auto">
+            {/* Drag handle (mobile only) */}
+            <div className="flex justify-center pt-3 pb-1 md:hidden"><div className="w-10 h-1 rounded-full bg-border" /></div>
+            <div className="p-5 md:p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold">Book a Court</h3>
@@ -1399,11 +1456,13 @@ export default function BookingPortal() {
         const court = PORTAL_COURTS.find(c => c.id === courtDetailId);
         if (!court) return null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
             <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => setCourtDetailId(null)} />
-            <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 fade-in duration-200">
+            <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-lg md:mx-4 max-h-[90vh] flex flex-col animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200">
+              {/* Drag handle (mobile) */}
+              <div className="flex justify-center pt-3 pb-1 md:hidden"><div className="w-10 h-1 rounded-full bg-border" /></div>
               {/* Header */}
-              <div className="p-6 border-b flex items-center justify-between shrink-0">
+              <div className="px-5 md:px-6 pb-4 md:py-6 md:border-b flex items-center justify-between shrink-0">
                 <h3 className="text-lg font-bold">{court.name}</h3>
                 <button onClick={() => setCourtDetailId(null)} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
                   <X className="h-4 w-4" />
@@ -1496,10 +1555,11 @@ export default function BookingPortal() {
 
       {/* ===== AGREEMENT TEXT MODAL ===== */}
       {agreementModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => setAgreementModal(null)} />
-          <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-lg mx-4 max-h-[80vh] flex flex-col animate-in zoom-in-95 fade-in duration-200">
-            <div className="p-6 border-b flex items-center justify-between shrink-0">
+          <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-lg md:mx-4 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200">
+            <div className="flex justify-center pt-3 pb-1 md:hidden"><div className="w-10 h-1 rounded-full bg-border" /></div>
+            <div className="px-5 md:px-6 pb-3 md:py-6 md:border-b flex items-center justify-between shrink-0">
               <h3 className="text-lg font-bold">{FACILITY_AGREEMENTS.find(a => a.id === agreementModal)?.label}</h3>
               <button onClick={() => setAgreementModal(null)} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
@@ -1520,9 +1580,9 @@ export default function BookingPortal() {
 
       {/* ===== SIGN-IN MODAL ===== */}
       {showSignInModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => { setShowSignInModal(false); setSignInSent(false); }} />
-          <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-sm mx-4 animate-in zoom-in-95 fade-in duration-200">
+          <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-sm md:mx-4 animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200">
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold">Sign In</h3>

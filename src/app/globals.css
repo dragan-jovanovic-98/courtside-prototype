@@ -345,6 +345,11 @@
   box-shadow: 0 0 0 3px oklch(0.72 0.12 192 / 0.2);
 }
 
+/* Safe area for iOS home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Sidebar active item — left accent bar */
 .nav-active-accent {
   position: relative;
