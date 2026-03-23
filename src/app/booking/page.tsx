@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
   Calendar as CalendarIcon, Ticket, UserCircle, LogIn, Bell, CheckCircle2, Copy, ExternalLink,
   X, Plus, Minus, Lock, QrCode, Key, Mail, Phone, PanelLeft, PanelLeftClose,
   Users, Share2, Lightbulb, Video, Trophy, Dumbbell, MessageSquare,
-  GraduationCap, Zap,
+  GraduationCap, Zap, Info, CircleDot, Target, Circle,
 } from "lucide-react";
 
 // ============================================================
@@ -35,6 +35,9 @@ interface PortalCourt {
   memberRate: number;
   amenities: string[];
   parentId?: number;
+  surface?: string;
+  dimensions?: string;
+  description?: string;
 }
 
 interface SlotData {
@@ -67,14 +70,14 @@ const FACILITY = {
 const SPORTS = ['All', 'Pickleball', 'Tennis', 'Basketball', 'Volleyball'];
 
 const PORTAL_COURTS: PortalCourt[] = [
-  { id: 0, name: 'Court 1', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'] },
-  { id: 1, name: 'Court 2', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'] },
-  { id: 2, name: 'Court 3', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting', 'Video Replay'] },
-  { id: 3, name: 'Court 4', sport: 'Tennis', sports: ['Tennis'], hourlyRate: 60, memberRate: 51.00, amenities: ['Lighting', 'Scoreboard'] },
-  { id: 4, name: 'Court 4A', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], parentId: 3 },
-  { id: 5, name: 'Court 4B', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], parentId: 3 },
-  { id: 6, name: 'Court 5', sport: 'Tennis', sports: ['Tennis'], hourlyRate: 60, memberRate: 51.00, amenities: ['Lighting', 'Ball Machine'] },
-  { id: 7, name: 'Court 6', sport: 'Basketball', sports: ['Basketball', 'Volleyball'], hourlyRate: 55, memberRate: 46.75, amenities: ['Lighting', 'Scoreboard'] },
+  { id: 0, name: 'Court 1', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], surface: 'Sport Court', dimensions: "44' × 20'", description: 'Standard pickleball court with professional-grade Sport Court surface and LED lighting.' },
+  { id: 1, name: 'Court 2', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], surface: 'Sport Court', dimensions: "44' × 20'", description: 'Standard pickleball court with LED lighting. Ideal for recreational and competitive play.' },
+  { id: 2, name: 'Court 3', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting', 'Video Replay'], surface: 'Sport Court', dimensions: "44' × 20'", description: 'Premium pickleball court with video replay system for reviewing your games.' },
+  { id: 3, name: 'Court 4', sport: 'Tennis', sports: ['Tennis'], hourlyRate: 60, memberRate: 51.00, amenities: ['Lighting', 'Scoreboard'], surface: 'Hardcourt', dimensions: "78' × 36'", description: 'Full-size tennis court with electronic scoreboard and professional lighting.' },
+  { id: 4, name: 'Court 4A', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], parentId: 3, surface: 'Sport Court', dimensions: "44' × 20'", description: 'Converted pickleball court within Court 4. Available when Court 4 is split.' },
+  { id: 5, name: 'Court 4B', sport: 'Pickleball', sports: ['Pickleball'], hourlyRate: 45, memberRate: 38.25, amenities: ['Lighting'], parentId: 3, surface: 'Sport Court', dimensions: "44' × 20'", description: 'Converted pickleball court within Court 4. Available when Court 4 is split.' },
+  { id: 6, name: 'Court 5', sport: 'Tennis', sports: ['Tennis'], hourlyRate: 60, memberRate: 51.00, amenities: ['Lighting', 'Ball Machine'], surface: 'Hardcourt', dimensions: "78' × 36'", description: 'Tennis court with ball machine available for solo practice sessions.' },
+  { id: 7, name: 'Court 6', sport: 'Basketball', sports: ['Basketball', 'Volleyball'], hourlyRate: 55, memberRate: 46.75, amenities: ['Lighting', 'Scoreboard'], surface: 'Hardwood', dimensions: "94' × 50'", description: 'Full-size multi-sport court with hardwood flooring. Configurable for basketball and volleyball with retractable nets.' },
 ];
 
 const PORTAL_NAV = [
@@ -112,6 +115,18 @@ function AmenityIcon({ name, className }: { name: string; className?: string }) 
   }
 }
 
+// Sport icon mapping (placeholder icons until custom sport icons are designed)
+function SportIcon({ sport, className }: { sport: string; className?: string }) {
+  const cn = className || "h-4 w-4";
+  switch (sport) {
+    case 'Pickleball': return <CircleDot className={cn} />;
+    case 'Tennis': return <Target className={cn} />;
+    case 'Basketball': return <Circle className={cn} />;
+    case 'Volleyball': return <Zap className={cn} />;
+    default: return <Circle className={cn} />;
+  }
+}
+
 // Sport color mapping for badges
 function sportBadgeClass(sport: string): string {
   switch (sport) {
@@ -139,8 +154,7 @@ function slotToShortTime(slot: number): string {
   const m = totalMin % 60;
   const period = h >= 12 ? 'PM' : 'AM';
   const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  if (m === 0) return `${display} ${period}`;
-  return `${display}:${m.toString().padStart(2, '0')}`;
+  return `${display}:${m.toString().padStart(2, '0')} ${period}`;
 }
 
 const TOTAL_SLOTS = (FACILITY.closeHour - FACILITY.openHour) * 2;
@@ -162,14 +176,14 @@ function getCourtCounts(): Record<string, number> {
 function generateBookings(): SlotData[] {
   const bookings: SlotData[] = [];
   const patterns: Record<number, { start: number; span: number; status: SlotStatus; label?: string }[]> = {
-    0: [{ start: 0, span: 2, status: 'booked', label: 'Booked' }, { start: 2, span: 4, status: 'booked', label: 'Booked' }, { start: 8, span: 2, status: 'booked', label: 'Booked' }, { start: 14, span: 3, status: 'booked', label: 'Booked' }, { start: 20, span: 4, status: 'booked', label: 'Booked' }, { start: 25, span: 2, status: 'booked', label: 'Booked' }],
-    1: [{ start: 1, span: 3, status: 'booked', label: 'Booked' }, { start: 6, span: 4, status: 'joinable', label: 'Open Play' }, { start: 12, span: 2, status: 'booked', label: 'Booked' }, { start: 16, span: 2, status: 'booked', label: 'Booked' }, { start: 22, span: 4, status: 'booked', label: 'Booked' }],
-    2: [{ start: 0, span: 8, status: 'booked', label: 'Junior Camp' }, { start: 10, span: 2, status: 'booked', label: 'Booked' }, { start: 14, span: 2, status: 'booked', label: 'Booked' }, { start: 18, span: 4, status: 'joinable', label: 'Open Play' }, { start: 24, span: 2, status: 'booked', label: 'Booked' }],
-    3: [{ start: 0, span: 4, status: 'booked', label: 'Booked' }, { start: 6, span: 2, status: 'booked', label: 'Booked' }, { start: 10, span: 4, status: 'booked', label: 'League' }, { start: 16, span: 6, status: 'maintenance', label: 'Maintenance' }, { start: 24, span: 4, status: 'booked', label: 'Booked' }],
-    4: [{ start: 2, span: 2, status: 'booked', label: 'Booked' }, { start: 6, span: 4, status: 'booked', label: 'Clinic' }, { start: 12, span: 2, status: 'booked', label: 'Booked' }, { start: 16, span: 6, status: 'maintenance', label: 'Maintenance' }, { start: 24, span: 2, status: 'booked', label: 'Booked' }],
-    5: [{ start: 0, span: 2, status: 'booked', label: 'Booked' }, { start: 4, span: 2, status: 'booked', label: 'Booked' }, { start: 8, span: 4, status: 'booked', label: 'Booked' }, { start: 16, span: 6, status: 'maintenance', label: 'Maintenance' }, { start: 24, span: 3, status: 'booked', label: 'Booked' }],
-    6: [{ start: 0, span: 4, status: 'booked', label: 'Booked' }, { start: 6, span: 2, status: 'booked', label: 'Booked' }, { start: 10, span: 4, status: 'booked', label: 'Lesson' }, { start: 16, span: 2, status: 'booked', label: 'Booked' }, { start: 20, span: 4, status: 'booked', label: 'Booked' }, { start: 26, span: 2, status: 'booked', label: 'Booked' }],
-    7: [{ start: 0, span: 4, status: 'booked', label: 'Booked' }, { start: 6, span: 4, status: 'joinable', label: 'Drop-In Basketball' }, { start: 12, span: 2, status: 'booked', label: 'Booked' }, { start: 16, span: 4, status: 'booked', label: 'League' }, { start: 22, span: 2, status: 'booked', label: 'Booked' }],
+    0: [{ start: 0, span: 2, status: 'booked' }, { start: 2, span: 4, status: 'booked' }, { start: 8, span: 2, status: 'booked' }, { start: 14, span: 3, status: 'booked' }, { start: 20, span: 4, status: 'booked' }, { start: 25, span: 2, status: 'booked' }],
+    1: [{ start: 1, span: 3, status: 'booked' }, { start: 6, span: 4, status: 'joinable', label: 'Open Play' }, { start: 12, span: 2, status: 'booked' }, { start: 16, span: 2, status: 'booked' }, { start: 22, span: 4, status: 'booked' }],
+    2: [{ start: 0, span: 8, status: 'booked' }, { start: 10, span: 2, status: 'booked' }, { start: 14, span: 2, status: 'booked' }, { start: 18, span: 4, status: 'joinable', label: 'Open Play' }, { start: 24, span: 2, status: 'booked' }],
+    3: [{ start: 0, span: 4, status: 'booked' }, { start: 6, span: 2, status: 'booked' }, { start: 10, span: 4, status: 'booked' }, { start: 16, span: 6, status: 'booked' }, { start: 24, span: 4, status: 'booked' }],
+    4: [{ start: 2, span: 2, status: 'booked' }, { start: 6, span: 4, status: 'booked' }, { start: 12, span: 2, status: 'booked' }, { start: 16, span: 6, status: 'booked' }, { start: 24, span: 2, status: 'booked' }],
+    5: [{ start: 0, span: 2, status: 'booked' }, { start: 4, span: 2, status: 'booked' }, { start: 8, span: 4, status: 'booked' }, { start: 16, span: 6, status: 'booked' }, { start: 24, span: 3, status: 'booked' }],
+    6: [{ start: 0, span: 4, status: 'booked' }, { start: 6, span: 2, status: 'booked' }, { start: 10, span: 4, status: 'booked' }, { start: 16, span: 2, status: 'booked' }, { start: 20, span: 4, status: 'booked' }, { start: 26, span: 2, status: 'booked' }],
+    7: [{ start: 0, span: 4, status: 'booked' }, { start: 6, span: 4, status: 'joinable', label: 'Drop-In Basketball' }, { start: 12, span: 2, status: 'booked' }, { start: 16, span: 4, status: 'booked' }, { start: 22, span: 2, status: 'booked' }],
   };
 
   for (const [courtId, blocks] of Object.entries(patterns)) {
@@ -214,6 +228,14 @@ export default function BookingPortal() {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [signInEmail, setSignInEmail] = useState('');
   const [signInSent, setSignInSent] = useState(false);
+
+  // Court detail modal
+  const [courtDetailId, setCourtDetailId] = useState<number | null>(null);
+
+  // Booking modal state (redesigned)
+  const [modalCourtId, setModalCourtId] = useState<number | null>(null);
+  const [modalStartSlot, setModalStartSlot] = useState<number | null>(null);
+  const [modalEndSlot, setModalEndSlot] = useState<number | null>(null);
 
   // Checkout state
   const [promoCode, setPromoCode] = useState('');
@@ -272,17 +294,7 @@ export default function BookingPortal() {
     return count;
   }
 
-  // Available durations for a given slot
-  function getAvailableDurations(courtId: number, slotIndex: number): number[] {
-    const maxSlots = getMaxContiguousSlots(courtId, slotIndex);
-    const durations: number[] = [];
-    for (let slots = MIN_BOOKING_SLOTS; slots <= maxSlots; slots++) {
-      durations.push(slots * 30);
-    }
-    return durations;
-  }
-
-  // Get slot status (simplified — no duration-based "too short")
+  // Get slot status
   function getSlotStatus(courtId: number, slotIndex: number): { status: SlotStatus; label?: string; span?: number } {
     if (isLoggedIn) {
       const own = OWN_BOOKINGS.find(b => b.courtId === courtId && b.slotIndex === slotIndex);
@@ -298,13 +310,11 @@ export default function BookingPortal() {
     // Check if this gap is below minimum booking time
     const contiguous = getMaxContiguousSlots(courtId, slotIndex);
     if (contiguous < MIN_BOOKING_SLOTS) {
-      // Check if this is the start of a too-short gap
       const prevBooking = bookings.find(b => b.courtId === courtId && b.slotIndex === slotIndex - 1);
       const prevOwn = isLoggedIn && OWN_BOOKINGS.some(b => b.courtId === courtId && slotIndex - 1 >= b.slotIndex && slotIndex - 1 < b.slotIndex + b.span);
       if (slotIndex === 0 || prevBooking || prevOwn) {
         return { status: 'too-short' };
       }
-      // Part of an already-started too-short gap
       const gapStart = (() => {
         for (let i = slotIndex - 1; i >= 0; i--) {
           const b = bookings.find(bk => bk.courtId === courtId && bk.slotIndex === i);
@@ -322,16 +332,34 @@ export default function BookingPortal() {
     return { status: 'available' };
   }
 
-  // Price for a slot (per-slot rate based on 30-min granularity)
-  function getSlotPrice(court: PortalCourt): number {
-    const rate = isLoggedIn ? court.memberRate : court.hourlyRate;
-    return Math.round(rate / 2 * 100) / 100;
-  }
-
   // Price for a duration
   function getDurationPrice(court: PortalCourt, durationMin: number): number {
     const rate = isLoggedIn ? court.memberRate : court.hourlyRate;
     return Math.round(rate * (durationMin / 60) * 100) / 100;
+  }
+
+  // Get all available start times for a court on the current date
+  function getAvailableStartTimes(courtId: number): number[] {
+    const starts: number[] = [];
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+      const status = getSlotStatus(courtId, i);
+      if (status.status === 'available') {
+        if (getMaxContiguousSlots(courtId, i) >= MIN_BOOKING_SLOTS) {
+          starts.push(i);
+        }
+      }
+    }
+    return starts;
+  }
+
+  // Get valid end times given a court and start slot
+  function getValidEndTimes(courtId: number, startSlot: number): number[] {
+    const maxSlots = getMaxContiguousSlots(courtId, startSlot);
+    const ends: number[] = [];
+    for (let i = MIN_BOOKING_SLOTS; i <= maxSlots; i++) {
+      ends.push(startSlot + i);
+    }
+    return ends;
   }
 
   // Checkout price calculations
@@ -349,14 +377,23 @@ export default function BookingPortal() {
   const total = Math.round((taxable + tax) * 100) / 100;
   const allAgreed = FACILITY_AGREEMENTS.every(a => agreements[a.id]);
 
+  // Modal court for price display
+  const modalCourt = modalCourtId !== null ? PORTAL_COURTS.find(c => c.id === modalCourtId) : null;
+  const modalDuration = (modalStartSlot !== null && modalEndSlot !== null) ? (modalEndSlot - modalStartSlot) * 30 : 0;
+  const modalPrice = modalCourt && modalDuration > 0 ? getDurationPrice(modalCourt, modalDuration) : 0;
+
   function handleSlotClick(courtId: number, slotIndex: number) {
-    setSelectedSlot({ courtId, slotIndex });
-    const durations = getAvailableDurations(courtId, slotIndex);
-    setSelectedDuration(durations[0] || 60);
+    setModalCourtId(courtId);
+    setModalStartSlot(slotIndex);
+    const minSlots = FACILITY.minBookingMinutes / 30;
+    setModalEndSlot(slotIndex + minSlots);
     setShowBookingModal(true);
   }
 
   function handleProceedToCheckout() {
+    if (modalCourtId === null || modalStartSlot === null || modalEndSlot === null) return;
+    setSelectedSlot({ courtId: modalCourtId, slotIndex: modalStartSlot });
+    setSelectedDuration((modalEndSlot - modalStartSlot) * 30);
     setShowBookingModal(false);
     setView('checkout');
     setPromoCode('');
@@ -392,6 +429,11 @@ export default function BookingPortal() {
   })();
   const isToday = dateOffset === 0;
 
+  // Courts filtered for booking modal (based on active sport filter)
+  const modalFilteredCourts = selectedSport === 'All'
+    ? PORTAL_COURTS
+    : PORTAL_COURTS.filter(c => c.sports.includes(selectedSport));
+
   // ============================================================
   // RENDER
   // ============================================================
@@ -400,15 +442,26 @@ export default function BookingPortal() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
 
       {/* ===== FACILITY HEADER ===== */}
-      <header className="h-14 border-b bg-card shrink-0 flex items-center justify-between px-4 lg:px-6 z-20" role="banner">
+      <header className="h-16 border-b bg-card shrink-0 flex items-center justify-between px-5 lg:px-8 z-20" role="banner">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-primary">{FACILITY.initials}</span>
+          <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-primary">{FACILITY.initials}</span>
           </div>
-          <span className="text-sm font-bold text-foreground hidden sm:block">{FACILITY.name}</span>
-          <a href={`tel:${FACILITY.phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors ml-1">
-            <Phone className="h-3.5 w-3.5" />
-            <span className="text-xs hidden md:inline">{FACILITY.phone}</span>
+          <span className="text-base font-bold text-foreground hidden sm:block">{FACILITY.name}</span>
+          <div className="h-4 w-px bg-border hidden lg:block" />
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(FACILITY.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span>{FACILITY.address}</span>
+          </a>
+          <div className="h-4 w-px bg-border hidden md:block" />
+          <a href={`tel:${FACILITY.phone}`} className="flex items-center gap-1.5 text-foreground/70 hover:text-foreground transition-colors">
+            <Phone className="h-4 w-4 shrink-0" />
+            <span className="text-sm font-medium hidden md:inline">{FACILITY.phone}</span>
           </a>
         </div>
 
@@ -485,15 +538,14 @@ export default function BookingPortal() {
             role="complementary"
             aria-label="Customer navigation"
           >
-            <nav className="flex-1 py-2 px-1.5 space-y-0.5" role="navigation">
+            <nav className="flex-1 py-2 px-1.5 flex flex-col gap-0.5" role="navigation">
               {PORTAL_NAV.map(item => {
                 const Icon = item.icon;
                 const active = activePortalNav === item.id;
                 const btn = (
                   <button
-                    key={item.id}
                     onClick={() => { setActivePortalNav(item.id); if (item.id === 'book') { setView('grid'); setSelectedSlot(null); } }}
-                    className={`w-full flex items-center ${sidebarExpanded ? 'gap-2.5 px-2.5' : 'justify-center px-0'} py-2.5 rounded-md transition-colors ${
+                    className={`w-full flex items-center ${sidebarExpanded ? 'gap-2.5 px-2.5' : 'justify-center'} py-2.5 rounded-md transition-colors ${
                       active ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-medium'
                     }`}
                     aria-current={active ? 'page' : undefined}
@@ -502,9 +554,13 @@ export default function BookingPortal() {
                     {sidebarExpanded && <span className="text-sm truncate">{item.label}</span>}
                   </button>
                 );
-                return sidebarExpanded ? <div key={item.id}>{btn}</div> : (
+                return sidebarExpanded ? (
+                  <div key={item.id}>{btn}</div>
+                ) : (
                   <Tooltip key={item.id}>
-                    <TooltipTrigger>{btn}</TooltipTrigger>
+                    <TooltipTrigger>
+                      <div className="w-full">{btn}</div>
+                    </TooltipTrigger>
                     <TooltipContent side="right" className="text-xs font-semibold">{item.label}</TooltipContent>
                   </Tooltip>
                 );
@@ -571,13 +627,13 @@ export default function BookingPortal() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
+                  <div className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-foreground/70 bg-muted/50 px-3 py-1.5 rounded-full">
+                    <Clock className="h-4 w-4" />
                     Open {slotToTime(0)} – {slotToTime(TOTAL_SLOTS)}
                   </div>
                 </div>
 
-                {/* Row 2: Sport pills only (duration selector removed) */}
+                {/* Row 2: Sport pills */}
                 <div className="flex items-center gap-1.5 overflow-x-auto">
                   {SPORTS.map(sport => {
                     const count = sport === 'All' ? PORTAL_COURTS.length : (courtCounts[sport] || 0);
@@ -627,7 +683,7 @@ export default function BookingPortal() {
                   </div>
                 ) : (
                   <div className="min-w-[600px]">
-                    {/* Column headers — improved visual hierarchy */}
+                    {/* Column headers */}
                     <div
                       className="sticky top-0 z-10 bg-card border-b"
                       style={{
@@ -640,10 +696,22 @@ export default function BookingPortal() {
                       </div>
                       {filteredCourts.map((court, colIdx) => (
                         <div key={court.id} className={`px-2 py-2 text-center flex flex-col items-center gap-0.5 ${colIdx < filteredCourts.length - 1 ? 'border-r border-r-border/50' : ''}`}>
-                          <p className="text-xs font-bold leading-tight">{court.name}</p>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${sportBadgeClass(court.sport)}`}>
-                            {court.sport}
-                          </span>
+                          <button
+                            onClick={() => setCourtDetailId(court.id)}
+                            className="text-xs font-bold leading-tight hover:text-primary transition-colors cursor-pointer flex items-center gap-1"
+                            aria-label={`View ${court.name} details`}
+                          >
+                            {court.name}
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                          <div className="flex flex-wrap items-center justify-center gap-1 mt-0.5">
+                            {court.sports.map(sport => (
+                              <span key={sport} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${sportBadgeClass(sport)}`}>
+                                <span className="hidden sm:inline">{sport}</span>
+                                <span className="sm:hidden"><SportIcon sport={sport} className="h-3 w-3" /></span>
+                              </span>
+                            ))}
+                          </div>
                           {court.amenities.length > 0 && (
                             <div className="flex items-center gap-1 mt-0.5">
                               {court.amenities.map(a => (
@@ -700,7 +768,7 @@ export default function BookingPortal() {
 
                       {/* Court cells */}
                       {filteredCourts.map((court, colIdx) => {
-                        const gridCol = colIdx + 2; // +2 because col 1 is time
+                        const gridCol = colIdx + 2;
                         const cells: React.ReactNode[] = [];
                         let slotIdx = 0;
 
@@ -714,7 +782,6 @@ export default function BookingPortal() {
                           const colBorderClass = isLastCol ? '' : 'border-r border-r-border/50';
 
                           if (slot.status === 'available') {
-                            const price = getSlotPrice(court);
                             const timeStr = slotToShortTime(slotIdx);
                             cells.push(
                               <div
@@ -724,29 +791,13 @@ export default function BookingPortal() {
                               >
                                 <button
                                   onClick={() => !isPast && handleSlotClick(court.id, slotIdx)}
-                                  className="w-full h-[calc(100%-3px)] rounded border border-primary/20 bg-primary/[0.04] hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center justify-center gap-1 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  className="w-full h-[calc(100%-3px)] rounded border border-primary/30 bg-primary/[0.06] hover:border-primary/60 hover:bg-primary/15 transition-all flex items-center justify-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
                                   disabled={isPast}
-                                  aria-label={`Book ${court.name} at ${timeStr} for $${price.toFixed(0)}`}
+                                  aria-label={`Book ${court.name} at ${timeStr}`}
                                 >
-                                  <span className="text-[9px] text-muted-foreground/70 group-hover:text-primary/70 tabular-nums">{timeStr}</span>
-                                  <span className="text-[11px] font-semibold text-primary/80 group-hover:text-primary tabular-nums">${price.toFixed(0)}</span>
+                                  <span className="text-xs font-bold text-primary/70 group-hover:text-primary tabular-nums">{timeStr}</span>
                                 </button>
                               </div>
-                            );
-                            slotIdx++;
-                          } else if (slot.status === 'too-short') {
-                            cells.push(
-                              <Tooltip key={`${court.id}-${slotIdx}`}>
-                                <TooltipTrigger>
-                                  <div
-                                    className={`${borderClass} ${colBorderClass} px-0.5 flex items-center justify-center`}
-                                    style={{ gridColumn: gridCol, gridRow: slotIdx + 1 }}
-                                  >
-                                    <div className="w-full h-[calc(100%-3px)] rounded bg-muted/20" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="text-[10px]">Below minimum booking time ({FACILITY.minBookingMinutes} min)</TooltipContent>
-                              </Tooltip>
                             );
                             slotIdx++;
                           } else if (slot.status === 'own-booking' && slot.label) {
@@ -760,8 +811,8 @@ export default function BookingPortal() {
                                   className="w-full h-full rounded bg-primary/10 border border-primary/25 flex flex-col items-center justify-center cursor-pointer hover:bg-primary/15 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
                                   aria-label={`Your booking: ${slotToTime(slotIdx)} – ${slotToTime(slotIdx + rowSpan)}`}
                                 >
-                                  <span className="text-[9px] font-bold text-primary">{slot.label}</span>
-                                  {rowSpan > 2 && <span className="text-[8px] text-primary/70">{slotToTime(slotIdx)} – {slotToTime(slotIdx + rowSpan)}</span>}
+                                  <span className="text-[11px] font-bold text-primary">{slot.label}</span>
+                                  {rowSpan > 2 && <span className="text-[10px] font-medium text-primary/70">{slotToTime(slotIdx)} – {slotToTime(slotIdx + rowSpan)}</span>}
                                 </button>
                               </div>
                             );
@@ -775,45 +826,47 @@ export default function BookingPortal() {
                               >
                                 <button
                                   onClick={() => !isPast && handleSlotClick(court.id, slotIdx)}
-                                  className="w-full h-full rounded bg-amber-50 border border-amber-200 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-100/70 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                                  className="w-full h-full rounded bg-orange-50 border border-orange-200 flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400/40"
                                   disabled={isPast}
                                   aria-label={`Join ${slot.label} at ${slotToTime(slotIdx)}`}
                                 >
-                                  <span className="text-[9px] font-semibold text-amber-700">{slot.label}</span>
-                                  {rowSpan > 2 && <span className="text-[8px] font-medium text-amber-600">Join</span>}
+                                  <span className="text-xs font-bold text-orange-700">{slot.label}</span>
+                                  {rowSpan > 2 && <span className="text-[10px] font-semibold text-orange-600">Join</span>}
                                 </button>
                               </div>
                             );
                             slotIdx += rowSpan;
-                          } else if (slot.status === 'maintenance' && slot.label) {
+                          } else if ((slot.status === 'booked' || slot.status === 'maintenance') && slot.span) {
+                            // Unified unavailable block — text inside block
+                            const blockStart = slotToTime(slotIdx);
+                            const blockEnd = slotToTime(slotIdx + rowSpan);
                             cells.push(
                               <div
                                 key={`${court.id}-${slotIdx}`}
                                 className={`${borderClass} ${colBorderClass} px-0.5 py-0.5`}
                                 style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
                               >
-                                <div className="w-full h-full rounded bg-muted flex items-center justify-center overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 4px, rgba(0,0,0,0.04) 4px, rgba(0,0,0,0.04) 8px)' }}>
-                                  <span className="text-[9px] font-medium text-muted-foreground">Maintenance</span>
+                                <div className="w-full h-full rounded bg-foreground/10 flex flex-col items-center justify-center">
+                                  <span className="text-[10px] font-semibold text-muted-foreground/70">Unavailable</span>
+                                  {rowSpan > 1 && <span className="text-[9px] text-muted-foreground/50">{blockStart} – {blockEnd}</span>}
                                 </div>
                               </div>
                             );
                             slotIdx += rowSpan;
-                          } else if ((slot.status === 'booked' || slot.status === 'own-booking' || slot.status === 'joinable' || slot.status === 'maintenance') && slot.label) {
-                            // Booked with label (first slot of a block)
+                          } else if (slot.status === 'too-short') {
+                            // Too-short gap — same unavailable treatment
                             cells.push(
                               <div
                                 key={`${court.id}-${slotIdx}`}
-                                className={`${borderClass} ${colBorderClass} px-0.5 py-0.5`}
-                                style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
+                                className={`${borderClass} ${colBorderClass} px-0.5 flex items-center justify-center`}
+                                style={{ gridColumn: gridCol, gridRow: slotIdx + 1 }}
                               >
-                                <div className="w-full h-full rounded bg-foreground/[0.05] flex items-center justify-center">
-                                  <span className="text-[9px] font-medium text-muted-foreground">{slot.label}</span>
-                                </div>
+                                <div className="w-full h-[calc(100%-3px)] rounded bg-foreground/10" />
                               </div>
                             );
-                            slotIdx += rowSpan;
+                            slotIdx++;
                           } else {
-                            // Empty/continuation cell — just render an empty bordered cell
+                            // Empty/continuation cell
                             cells.push(
                               <div
                                 key={`${court.id}-${slotIdx}`}
@@ -867,7 +920,12 @@ export default function BookingPortal() {
                             <div className="flex items-center gap-1.5 mt-1">{selectedCourt.amenities.map(a => <Badge key={a} variant="outline" className="text-[9px] py-0">{a}</Badge>)}</div>
                           )}
                         </div>
-                        <button onClick={() => setShowBookingModal(true)} className="text-xs font-semibold text-primary hover:underline">Change</button>
+                        <button onClick={() => {
+                          setModalCourtId(selectedSlot.courtId);
+                          setModalStartSlot(selectedSlot.slotIndex);
+                          setModalEndSlot(selectedSlot.slotIndex + selectedDuration / 30);
+                          setShowBookingModal(true);
+                        }} className="text-xs font-semibold text-primary hover:underline">Change</button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1176,7 +1234,7 @@ export default function BookingPortal() {
                       <div>
                         <p className="text-sm font-medium">{FACILITY.name}</p>
                         <p className="text-xs text-muted-foreground">{FACILITY.address}</p>
-                        <button className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 mt-0.5"><ExternalLink className="h-3 w-3" />Get directions</button>
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(FACILITY.address)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 mt-0.5"><ExternalLink className="h-3 w-3" />Get directions</a>
                       </div>
                     </div>
                   </CardContent>
@@ -1229,84 +1287,212 @@ export default function BookingPortal() {
         </main>
       </div>
 
-      {/* ===== BOOKING MODAL ===== */}
-      {showBookingModal && selectedSlot && selectedCourt && (
+      {/* ===== BOOKING MODAL (Redesigned) ===== */}
+      {showBookingModal && modalCourtId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => setShowBookingModal(false)} />
           <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-md mx-4 animate-in zoom-in-95 fade-in duration-200">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold">Book This Court</h3>
+                <h3 className="text-lg font-bold">Book a Court</h3>
                 <button onClick={() => setShowBookingModal(false)} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Court info */}
-              <div className="flex items-center gap-3 mb-5">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <CalendarDays className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">{selectedCourt.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${sportBadgeClass(selectedCourt.sport)}`}>{selectedCourt.sport}</span>
-                    {selectedCourt.amenities.map(a => (
-                      <span key={a} className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                        <AmenityIcon name={a} className="h-3 w-3" /> {a}
-                      </span>
-                    ))}
-                  </div>
+              {/* Court selector */}
+              <div className="mb-4">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Court</label>
+                <select
+                  value={modalCourtId}
+                  onChange={(e) => {
+                    const newCourtId = Number(e.target.value);
+                    setModalCourtId(newCourtId);
+                    setModalStartSlot(null);
+                    setModalEndSlot(null);
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  {modalFilteredCourts.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} — {c.sports.join(', ')}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date (read-only) */}
+              <div className="mb-4">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Date</label>
+                <div className="h-10 px-3 rounded-md border border-border bg-muted/30 flex items-center text-sm font-semibold">
+                  {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </div>
               </div>
 
               {/* Start time */}
-              <div className="bg-muted/50 rounded-lg p-3 mb-5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Start Time</p>
-                <p className="text-sm font-semibold">{slotToTime(selectedSlot.slotIndex)} · {displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+              <div className="mb-4">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Start Time</label>
+                <select
+                  value={modalStartSlot ?? ''}
+                  onChange={(e) => {
+                    const slot = Number(e.target.value);
+                    setModalStartSlot(slot);
+                    const minSlots = FACILITY.minBookingMinutes / 30;
+                    setModalEndSlot(slot + minSlots);
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  {modalStartSlot === null && <option value="">Select start time</option>}
+                  {getAvailableStartTimes(modalCourtId).map(slot => (
+                    <option key={slot} value={slot}>{slotToTime(slot)}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Duration options */}
+              {/* End time */}
               <div className="mb-5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Select Duration</p>
-                <div className="space-y-2">
-                  {getAvailableDurations(selectedSlot.courtId, selectedSlot.slotIndex).map(dur => {
-                    const price = getDurationPrice(selectedCourt, dur);
-                    const endTime = slotToTime(selectedSlot.slotIndex + dur / 30);
-                    const active = selectedDuration === dur;
-                    return (
-                      <button
-                        key={dur}
-                        onClick={() => setSelectedDuration(dur)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                          active ? 'border-primary bg-primary/5' : 'border-border hover:border-foreground/20 hover:bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${active ? 'border-primary' : 'border-border'}`}>
-                            {active && <div className="h-2 w-2 rounded-full bg-primary" />}
-                          </div>
-                          <div className="text-left">
-                            <span className="text-sm font-semibold">{dur} minutes</span>
-                            <span className="text-xs text-muted-foreground ml-2">until {endTime}</span>
-                          </div>
-                        </div>
-                        <span className="text-sm font-bold tabular-nums">${price.toFixed(2)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">End Time</label>
+                <select
+                  value={modalEndSlot ?? ''}
+                  onChange={(e) => setModalEndSlot(Number(e.target.value))}
+                  disabled={modalStartSlot === null}
+                  className={`w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-semibold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 ${modalStartSlot === null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {modalStartSlot === null ? (
+                    <option value="">Select start time first</option>
+                  ) : (
+                    getValidEndTimes(modalCourtId, modalStartSlot).map(slot => (
+                      <option key={slot} value={slot}>{slotToTime(slot)} ({(slot - modalStartSlot!) * 30} min)</option>
+                    ))
+                  )}
+                </select>
               </div>
+
+              {/* Price display */}
+              {modalCourt && modalStartSlot !== null && modalEndSlot !== null && modalDuration > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">{modalCourt.name} — {modalDuration} min</p>
+                    <p className="text-xs text-muted-foreground">{slotToTime(modalStartSlot)} – {slotToTime(modalEndSlot)}</p>
+                  </div>
+                  <p className="text-lg font-bold tabular-nums">${modalPrice.toFixed(2)}</p>
+                </div>
+              )}
 
               {/* Proceed button */}
-              <Button className="w-full h-11 text-sm font-bold" onClick={handleProceedToCheckout}>
-                Proceed to Checkout — ${getDurationPrice(selectedCourt, selectedDuration).toFixed(2)}
+              <Button
+                className="w-full h-11 text-sm font-bold"
+                disabled={modalStartSlot === null || modalEndSlot === null}
+                onClick={handleProceedToCheckout}
+              >
+                {modalStartSlot !== null && modalEndSlot !== null
+                  ? `Proceed to Checkout — $${modalPrice.toFixed(2)}`
+                  : 'Select a time to continue'
+                }
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ===== COURT DETAIL MODAL ===== */}
+      {courtDetailId !== null && (() => {
+        const court = PORTAL_COURTS.find(c => c.id === courtDetailId);
+        if (!court) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={() => setCourtDetailId(null)} />
+            <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 fade-in duration-200">
+              {/* Header */}
+              <div className="p-6 border-b flex items-center justify-between shrink-0">
+                <h3 className="text-lg font-bold">{court.name}</h3>
+                <button onClick={() => setCourtDetailId(null)} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Content — scrollable */}
+              <div className="p-6 overflow-y-auto space-y-5">
+                {/* Image placeholder */}
+                <div className="w-full h-48 rounded-lg bg-muted flex items-center justify-center">
+                  <span className="text-sm text-muted-foreground">Court images uploaded by facility</span>
+                </div>
+
+                {/* Sport tags */}
+                <div className="flex flex-wrap gap-2">
+                  {court.sports.map(sport => (
+                    <span key={sport} className={`text-xs font-semibold px-3 py-1 rounded-full border ${sportBadgeClass(sport)}`}>
+                      {sport}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Details grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {court.surface && (
+                    <div>
+                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Surface</p>
+                      <p className="text-sm font-semibold">{court.surface}</p>
+                    </div>
+                  )}
+                  {court.dimensions && (
+                    <div>
+                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Dimensions</p>
+                      <p className="text-sm font-semibold">{court.dimensions}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Amenities */}
+                {court.amenities.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Amenities</p>
+                    <div className="flex flex-wrap gap-2">
+                      {court.amenities.map(a => (
+                        <div key={a} className="flex items-center gap-1.5 text-sm text-foreground bg-muted/50 px-3 py-1.5 rounded-md">
+                          <AmenityIcon name={a} className="h-4 w-4 text-muted-foreground" />
+                          {a}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {court.description && (
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">About</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{court.description}</p>
+                  </div>
+                )}
+
+                {/* Pricing */}
+                <div>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Pricing</p>
+                  <p className="text-sm font-semibold">${court.hourlyRate}/hr</p>
+                  {isLoggedIn && <p className="text-xs text-primary font-medium">Member rate: ${court.memberRate}/hr</p>}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t shrink-0">
+                <Button className="w-full h-11 text-sm font-bold" onClick={() => {
+                  setCourtDetailId(null);
+                  const firstAvail = (() => {
+                    for (let i = 0; i < TOTAL_SLOTS; i++) {
+                      const s = getSlotStatus(court.id, i);
+                      if (s.status === 'available' && getMaxContiguousSlots(court.id, i) >= MIN_BOOKING_SLOTS) return i;
+                    }
+                    return 0;
+                  })();
+                  handleSlotClick(court.id, firstAvail);
+                }}>
+                  Book This Court
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ===== AGREEMENT TEXT MODAL ===== */}
       {agreementModal && (

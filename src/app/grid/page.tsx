@@ -215,26 +215,26 @@ export default function CourtGridPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <div className="h-0.5 bg-primary shrink-0" />
+      <div className="h-[3px] bg-primary shrink-0" />
 
-      <header className="border-b bg-card shrink-0 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-5 h-11 flex items-center justify-between">
+      <header className="border-b bg-card shrink-0">
+        <div className="max-w-[1600px] mx-auto px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/courtside-logo.svg" alt="Courtside AI" width={22} height={22} className="h-5.5 w-5.5" />
-            <span className="text-sm font-semibold text-foreground tracking-tight">Courtside AI</span>
-            <span className="text-xs text-muted-foreground">/ Courts</span>
+            <img src="/courtside-logo.svg" alt="Courtside AI" width={24} height={24} className="h-6 w-6" />
+            <span className="text-sm font-bold text-foreground tracking-tight">Courtside AI</span>
+            <span className="text-xs font-medium text-muted-foreground">/ Courts</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-foreground">Wednesday, March 19, 2026</span>
+            <span className="text-sm font-semibold text-foreground">Wednesday, March 19, 2026</span>
             <Button
               size="sm"
               variant={showFullDay ? "secondary" : "outline"}
-              className="h-7 text-[11px] px-3"
+              className="h-8 text-[11px] px-3 font-bold btn-outline-modern"
               onClick={() => setShowFullDay(!showFullDay)}
             >
               {showFullDay ? 'Show Operating Hours' : 'Show Full Day'}
             </Button>
-            <Button size="sm" className="h-8 text-xs px-4">+ New Booking</Button>
+            <Button size="sm" className="h-9 text-xs font-bold px-5 btn-primary-modern">+ New Booking</Button>
           </div>
         </div>
       </header>
@@ -246,7 +246,7 @@ export default function CourtGridPage() {
         <div className="h-3 w-px bg-border" />
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-5 rounded-sm bg-foreground/[0.18] border border-foreground/15" />
-          <span className="text-[10px] text-muted-foreground">Unavailable</span>
+          <span className="text-[10px] font-medium text-muted-foreground">Unavailable</span>
         </div>
       </div>
 
@@ -262,9 +262,9 @@ export default function CourtGridPage() {
               >
                 <div className="border-r" />
                 {courts.map((court, i) => (
-                  <div key={i} className={`py-1 px-1 text-center ${i < courts.length - 1 ? 'border-r' : ''}`}>
-                    <p className="text-xs font-semibold leading-tight">{court.name}</p>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
+                  <div key={i} className={`py-1.5 px-1 text-center ${i < courts.length - 1 ? 'border-r' : ''}`}>
+                    <p className="text-xs font-bold leading-tight">{court.name}</p>
+                    <p className="text-[10px] font-medium text-muted-foreground leading-tight">
                       {court.sport}
                       {court.closeSlot < (FACILITY_CLOSE_HOUR - viewStartHour) * 2 && (
                         <span className="text-destructive/60"> · Closes {slotToTimeAbs(court.closeSlot, viewStartHour)}</span>
@@ -284,7 +284,7 @@ export default function CourtGridPage() {
                       className={`${i > 0 ? 'border-t border-border/70' : ''} flex items-start`}
                       style={{ height: HOUR_HEIGHT }}
                     >
-                      <span className="text-[10px] font-medium text-muted-foreground pl-1 pt-px leading-none select-none tabular-nums">
+                      <span className="text-[10px] font-semibold text-muted-foreground pl-1 pt-px leading-none select-none tabular-nums">
                         {hour}
                       </span>
                     </div>
@@ -409,7 +409,7 @@ export default function CourtGridPage() {
 
         {/* Detail Panel */}
         {selectedBooking && (
-          <div className="w-80 border-l bg-card shrink-0 flex flex-col overflow-hidden shadow-lg animate-in slide-in-from-right-5 duration-200">
+          <div className="w-80 border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
             <BookingDetailPanel
               booking={selectedBooking}
               courtName={selectedCourt}
@@ -502,7 +502,7 @@ function BookingDetailPanel({ booking, courtName, viewStartHour, onClose }: {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="text-sm font-semibold">Booking Details</h3>
+        <h3 className="text-sm font-bold">Booking Details</h3>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none">×</button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -553,11 +553,11 @@ function BookingDetailPanel({ booking, courtName, viewStartHour, onClose }: {
         )}
       </div>
       <div className="border-t px-4 py-3 space-y-2">
-        {booking.payment === 'unpaid' && <Button className="w-full h-8 text-xs">Send Payment Link</Button>}
-        {booking.checkedIn === false && booking.payment === 'paid' && <Button className="w-full h-8 text-xs">Check In</Button>}
+        {booking.payment === 'unpaid' && <Button className="w-full h-9 text-xs font-bold btn-primary-modern">Send Payment Link</Button>}
+        {booking.checkedIn === false && booking.payment === 'paid' && <Button className="w-full h-9 text-xs font-bold btn-primary-modern">Check In</Button>}
         <div className="flex gap-2">
-          <Button className="flex-1 h-8 text-xs" variant="outline">Reschedule</Button>
-          <Button className="flex-1 h-8 text-xs" variant="outline">Cancel</Button>
+          <Button className="flex-1 h-9 text-xs font-bold btn-outline-modern" variant="outline">Reschedule</Button>
+          <Button className="flex-1 h-9 text-xs font-bold btn-outline-modern" variant="outline">Cancel</Button>
         </div>
       </div>
     </div>
@@ -567,8 +567,8 @@ function BookingDetailPanel({ booking, courtName, viewStartHour, onClose }: {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-baseline">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="text-sm font-bold text-foreground">{value}</span>
     </div>
   );
 }
@@ -589,7 +589,7 @@ function LegendItem({ bgColor, borderColor, accentColor, label }: { bgColor: str
       <div className={`h-3 w-5 rounded-sm border ${bgColor} ${borderColor} relative overflow-hidden`}>
         <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${accentColor}`} />
       </div>
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
     </div>
   );
 }
