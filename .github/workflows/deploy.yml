@@ -46,6 +46,7 @@ jobs:
       - name: Prefix static asset paths with basePath
         run: |
           find src -name '*.tsx' -exec sed -i 's|src="/courtside-logo.svg"|src="/courtside-prototype/courtside-logo.svg"|g' {} +
+          find src -name '*.tsx' -exec sed -i 's|src="/COURTSIDE AI Horizontal Black resized.png"|src="/courtside-prototype/COURTSIDE AI Horizontal Black resized.png"|g' {} +
 
       - run: npm run build
 
