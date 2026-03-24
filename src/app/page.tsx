@@ -18,8 +18,10 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Tag, Clock, TrendingUp, TrendingDown, Minus, DollarSign, Activity, FileText, ArrowUpDown, Filter, Download, UserPlus, Eye, Pencil, Send, Ban, Archive, Plus,
   Copy, Wrench, AlertTriangle, Trash2, Power, ExternalLink,
   Star, Package, Play, Pause, PhoneIncoming, PhoneOutgoing, Shield, Database, Palette, Globe, RefreshCw, AlertCircle, Upload, Hash, Receipt, PieChart, Mic, CircleDot, Zap, ToggleLeft, Building2, type LucideIcon,
-  FileCheck, MessageCircle, Users2, Snowflake, Link2, Merge,
+  FileCheck, MessageCircle, Users2, Snowflake, Link2, Merge, Bell, Menu,
+  Key, QrCode,
 } from "lucide-react";
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 
 // ============================================================
@@ -139,20 +141,25 @@ function buildBookings(vsh: number): Booking[] {
 // ============================================================
 // NAV CONFIG
 // ============================================================
-const navItems = [
+const navItemsCore = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'courts', label: 'Courts', icon: CalendarDays },
   { id: 'customers', label: 'Customers', icon: Users },
   { id: 'billing', label: 'Billing', icon: CreditCard },
+  { id: 'courts', label: 'Courts', icon: CalendarDays },
+];
+const navItemsOps = [
   { id: 'programs', label: 'Programs', icon: GraduationCap },
   { id: 'leagues', label: 'Leagues', icon: Trophy },
   { id: 'staff', label: 'Staff', icon: UserCog },
   { id: 'pos', label: 'POS', icon: ShoppingBag },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
+  { id: 'messages', label: 'Communications', icon: MessageSquare },
   { id: 'access', label: 'Access', icon: DoorOpen },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'ai', label: 'AI', icon: Bot },
 ];
+const navItemsIntel = [
+  { id: 'reports', label: 'Reports', icon: BarChart3 },
+];
+const navItemAI = { id: 'ai', label: 'AI Dashboard', icon: Zap };
+const navItems = [...navItemsCore, ...navItemsOps, ...navItemsIntel, navItemAI];
 
 // ============================================================
 // SHARED COMPONENTS & UTILITIES
@@ -227,10 +234,12 @@ function SMetricCard({ label, value, trend, trendUp }: { label: string; value: s
 }
 
 function SPageHeader({ title, badge, children }: { title: string; badge?: string; children?: React.ReactNode }) {
+  // Action bar — renders below unified top bar. Title is shown in the unified top bar, so we only render badge + actions here.
+  const hasContent = badge || children;
+  if (!hasContent) return null;
   return (
-    <div className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0">
+    <div className="h-11 flex items-center justify-between px-3 md:px-5 bg-card/50 border-b border-border shrink-0">
       <div className="flex items-center gap-3">
-        <h1 className="text-base font-bold">{title}</h1>
         {badge && <Badge variant="secondary" className="text-[10px]">{badge}</Badge>}
       </div>
       <div className="flex items-center gap-2">{children}</div>
@@ -240,7 +249,7 @@ function SPageHeader({ title, badge, children }: { title: string; badge?: string
 
 function SToolbar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-12 flex items-center gap-3 px-6 border-b border-border bg-card/50 shrink-0">
+    <div className="min-h-[48px] flex items-center gap-2 md:gap-3 px-3 md:px-6 py-2 md:py-0 border-b border-border bg-card/50 shrink-0 flex-wrap">
       {children}
     </div>
   );
@@ -251,7 +260,7 @@ function SSearchInput({ placeholder, value, onChange }: { placeholder: string; v
     <div className="relative">
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
       <input type="text" placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
-        className="h-8 pl-8 pr-3 text-sm border border-border rounded-md bg-background font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 w-56" />
+        className="h-8 pl-8 pr-3 text-sm border border-border rounded-md bg-background font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 w-full md:w-56" />
     </div>
   );
 }
@@ -267,10 +276,10 @@ function SFilterPill({ label, active, onClick }: { label: string; active: boolea
 
 function STabBar({ tabs, active, onChange }: { tabs: string[]; active: string; onChange: (t: string) => void }) {
   return (
-    <div className="flex items-center border-b border-border px-6 bg-card shrink-0">
+    <div className="flex items-center border-b border-border px-3 md:px-6 bg-card shrink-0 overflow-x-auto">
       {tabs.map(tab => (
         <button key={tab} onClick={() => onChange(tab)}
-          className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${active === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+          className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold border-b-2 transition-colors -mb-px whitespace-nowrap ${active === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
           {tab}
         </button>
       ))}
@@ -373,6 +382,8 @@ export default function HomePage() {
   const [courtMoreMenu, setCourtMoreMenu] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -404,6 +415,18 @@ export default function HomePage() {
   });
 
   // Dynamic slot height: fill available space, with a minimum
+  // Cmd+K shortcut for command palette
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCmdkOpen(o => !o);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+
   useEffect(() => {
     function measure() {
       if (gridContainerRef.current) {
@@ -529,70 +552,168 @@ export default function HomePage() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <div className="h-[3px] bg-primary shrink-0" />
       <div className="flex-1 flex overflow-hidden">
-      {/* ===== SIDEBAR ===== */}
+      {/* ===== MOBILE DRAWER ===== */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-[280px] bg-card border-r flex flex-col shadow-xl animate-in slide-in-from-left duration-200">
+            {/* Drawer header */}
+            <div className="h-14 flex items-center justify-between px-4 border-b">
+              <div className="flex items-center gap-2.5">
+                <img src="/courtside-logo.svg" alt="Courtside AI" width={24} height={24} className="h-6 w-6 shrink-0" />
+                <span className="text-[14px] font-extrabold tracking-wide text-foreground uppercase">Courtside AI</span>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {/* Nav — grouped */}
+            <nav className="flex-1 py-2.5 px-3 overflow-y-auto">
+              {[navItemsCore, navItemsOps, navItemsIntel].map((group, gi) => (
+                <div key={gi}>
+                  {gi > 0 && <div className="my-2 mx-2 h-px bg-border/60" />}
+                  <div className="space-y-0.5">
+                    {group.map(item => {
+                      const Icon = item.icon;
+                      const active = activeNav === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false); }}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm transition-colors ${
+                            active ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'
+                          }`}
+                        >
+                          <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {/* AI — flagship */}
+              <div className="my-2 mx-2 h-px bg-primary/20" />
+              <button
+                onClick={() => { setActiveNav(navItemAI.id); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors ${
+                  activeNav === navItemAI.id
+                    ? 'bg-primary text-primary-foreground font-bold shadow-sm'
+                    : 'bg-primary/[0.06] text-primary hover:bg-primary/15 font-semibold'
+                }`}
+              >
+                <Zap className="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+                {navItemAI.label}
+              </button>
+            </nav>
+            {/* Footer */}
+            <div className="border-t py-3 px-3 space-y-1">
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-muted transition-colors">
+                <div className="h-6 w-6 rounded bg-primary/15 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-primary">KC</span>
+                </div>
+                <span className="font-semibold truncate flex-1 text-left">Kings Court Markham</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => { setActiveNav('settings'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
+                  activeNav === 'settings' ? 'bg-primary/10 text-primary font-bold' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'
+                }`}
+              >
+                <Settings className="h-[18px] w-[18px] shrink-0" strokeWidth={activeNav === 'settings' ? 2.2 : 1.8} />
+                Settings
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ===== DESKTOP SIDEBAR ===== */}
       <TooltipProvider delay={0}>
-      <aside className={`${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'} shrink-0 border-r bg-card flex flex-col transition-all duration-200`}>
+      <aside className={`${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'} shrink-0 border-r bg-card flex-col transition-all duration-200 relative hidden md:flex`}>
         {/* Logo */}
-        <div className="h-16 flex items-center border-b px-3">
+        <div className="h-14 flex items-center border-b px-2.5">
           {sidebarCollapsed ? (
             <div className="flex items-center justify-center w-full">
-              <img src="/courtside-logo.svg" alt="Courtside AI" width={28} height={28} className="h-7 w-7" />
+              <img src="/courtside-logo.svg" alt="Courtside AI" width={26} height={26} className="h-[26px] w-[26px]" />
             </div>
           ) : (
-            <div className="flex items-center">
-              <img src="/COURTSIDE AI Horizontal Black resized.png" alt="Courtside AI" className="h-11 w-auto" />
+            <div className="flex items-center gap-2.5 pl-0.5">
+              <img src="/courtside-logo.svg" alt="Courtside AI" width={26} height={26} className="h-[26px] w-[26px] shrink-0" />
+              <span className="text-[15px] font-extrabold tracking-wide text-foreground uppercase leading-none">Courtside AI</span>
             </div>
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-2.5 px-2 space-y-0.5 overflow-y-auto">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const active = activeNav === item.id;
+        {/* Sidebar toggle — hangs on the right edge */}
+        <button onClick={() => setSidebarCollapsed(c => !c)}
+          className="absolute top-[22px] -right-3 z-30 h-6 w-3 flex items-center justify-center bg-card border border-border border-l-0 rounded-r-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm"
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          {sidebarCollapsed ? (
+            <ChevronRight className="h-3 w-3" />
+          ) : (
+            <ChevronLeft className="h-3 w-3" />
+          )}
+        </button>
+
+        {/* Nav — grouped with dividers */}
+        <nav className="flex-1 py-2.5 px-2 overflow-y-auto">
+          {[navItemsCore, navItemsOps, navItemsIntel].map((group, gi) => (
+            <div key={gi}>
+              {gi > 0 && <div className="my-2 mx-2 h-px bg-border/60" />}
+              <div className="space-y-0.5">
+                {group.map(item => {
+                  const Icon = item.icon;
+                  const active = activeNav === item.id;
+                  const btn = (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveNav(item.id)}
+                      className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-2.5 py-2.5 rounded-md text-[13px] transition-colors ${
+                        active ? 'bg-primary/10 text-primary font-bold nav-active-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'
+                      }`}
+                    >
+                      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                      {!sidebarCollapsed && item.label}
+                    </button>
+                  );
+                  return sidebarCollapsed ? (
+                    <Tooltip key={item.id}>
+                      <TooltipTrigger>{btn}</TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs font-semibold">{item.label}</TooltipContent>
+                    </Tooltip>
+                  ) : <div key={item.id}>{btn}</div>;
+                })}
+              </div>
+            </div>
+          ))}
+          {/* AI — flagship section */}
+          <div className="my-2 mx-2 h-px bg-primary/20" />
+          {(() => {
+            const active = activeNav === navItemAI.id;
+            const Icon = navItemAI.icon;
             const btn = (
               <button
-                key={item.id}
-                onClick={() => setActiveNav(item.id)}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-2.5 py-2.5 rounded-md text-[13px] transition-colors ${
-                  active ? 'bg-primary/10 text-primary font-bold nav-active-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'
+                onClick={() => setActiveNav(navItemAI.id)}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-2.5 py-2.5 rounded-lg text-[13px] transition-colors ${
+                  active
+                    ? 'bg-primary text-primary-foreground font-bold shadow-sm'
+                    : 'bg-primary/[0.06] text-primary hover:bg-primary/15 font-semibold'
                 }`}
               >
-                <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                {!sidebarCollapsed && item.label}
+                <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+                {!sidebarCollapsed && navItemAI.label}
               </button>
             );
             return sidebarCollapsed ? (
-              <Tooltip key={item.id}>
+              <Tooltip>
                 <TooltipTrigger>{btn}</TooltipTrigger>
-                <TooltipContent side="right" className="text-xs font-semibold">{item.label}</TooltipContent>
+                <TooltipContent side="right" className="text-xs font-semibold">{navItemAI.label}</TooltipContent>
               </Tooltip>
-            ) : <div key={item.id}>{btn}</div>;
-          })}
+            ) : btn;
+          })()}
         </nav>
-
-        {/* Collapse / Expand toggle */}
-        <div className="border-t border-border/50 px-2 py-1.5">
-          {sidebarCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex justify-center">
-                  <button onClick={() => setSidebarCollapsed(false)}
-                    className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                    <PanelLeft className="h-[18px] w-[18px]" />
-                  </button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs font-semibold">Expand sidebar</TooltipContent>
-            </Tooltip>
-          ) : (
-            <button onClick={() => setSidebarCollapsed(true)}
-              className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-              <PanelLeftClose className="h-[18px] w-[18px] shrink-0" />
-              Collapse sidebar
-            </button>
-          )}
-        </div>
 
         {/* Facility selector + Settings */}
         <div className="border-t py-2 px-2 space-y-0.5">
@@ -651,14 +772,47 @@ export default function HomePage() {
       {/* ===== MAIN ===== */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
+        {/* ===== UNIFIED TOP BAR ===== */}
+        <div className="h-14 border-b bg-card shrink-0 flex items-center justify-between px-3 md:px-5 gap-2 md:gap-4">
+          {/* Left: hamburger (mobile) + page title */}
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            <button onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors md:hidden">
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="text-[15px] font-bold text-foreground">
+              {activeNav === 'home' ? 'Home' : activeNav === 'courts' ? 'Courts' : activeNav === 'customers' ? 'Customers' : activeNav === 'billing' ? 'Billing' : activeNav === 'programs' ? 'Programs' : activeNav === 'leagues' ? 'Leagues & Events' : activeNav === 'staff' ? 'Staff' : activeNav === 'pos' ? 'Point of Sale' : activeNav === 'messages' ? 'Communications' : activeNav === 'access' ? 'Access & Check-in' : activeNav === 'reports' ? 'Reports' : activeNav === 'ai' ? 'AI Dashboard' : activeNav === 'settings' ? 'Settings' : 'Home'}
+            </h1>
+          </div>
+          {/* Center: global search trigger — full bar on desktop, icon on mobile */}
+          <button onClick={() => setCmdkOpen(true)}
+            className="hidden sm:flex items-center gap-2 h-9 px-3.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-muted-foreground transition-colors cursor-pointer max-w-md w-full">
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-sm">Search...</span>
+            <kbd className="ml-auto text-[10px] font-semibold bg-background border border-border rounded px-1.5 py-0.5 hidden md:inline-flex">⌘K</kbd>
+          </button>
+          {/* Right: search icon (mobile) + notifications + avatar */}
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <button onClick={() => setCmdkOpen(true)} className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:hidden">
+              <Search className="h-[18px] w-[18px]" />
+            </button>
+            <button className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors relative">
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+            </button>
+            <button className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-[11px] font-bold text-primary hover:bg-primary/25 transition-colors">
+              DJ
+            </button>
+          </div>
+        </div>
+
         {/* ===== HOME PAGE ===== */}
         {activeNav === 'home' && (<>
-        {/* Top bar — Schedule / Dashboard toggle */}
-        <div className="h-16 border-b bg-card shrink-0 flex items-center px-6">
+        {/* Home sub-bar — Schedule / Dashboard toggle */}
+        <div className="h-11 border-b bg-card/50 shrink-0 flex items-center px-3 md:px-5">
           <div className="flex items-center border border-border rounded-md overflow-hidden">
             {(['schedule', 'dashboard'] as const).map((tab, i) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-5 py-2 text-sm font-semibold transition-colors ${i > 0 ? 'border-l border-border' : ''}
+                className={`px-4 py-1.5 text-[13px] font-semibold transition-colors ${i > 0 ? 'border-l border-border' : ''}
                   ${activeTab === tab ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
                 {tab === 'schedule' ? 'Schedule' : 'Dashboard'}
               </button>
@@ -670,66 +824,66 @@ export default function HomePage() {
         {activeTab === 'schedule' && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* View toggle + date + filters */}
-            <div className="shrink-0 border-b bg-card px-6 h-12 flex items-center justify-between">
-              {/* Left: view toggle */}
-              <div className="flex items-center border border-border rounded-md overflow-hidden">
-                {(['day', 'week', 'month', 'list'] as const).map((view, vi) => (
-                  <button key={view} onClick={() => setScheduleView(view)}
-                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${vi > 0 ? 'border-l border-border' : ''}
-                      ${scheduleView === view ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
-                    {view === 'day' ? 'Day' : view === 'week' ? 'Week' : view === 'month' ? 'Month' : 'List'}
+            <div className="shrink-0 border-b bg-card px-3 md:px-6 py-2 md:py-0 md:h-12 flex flex-col md:flex-row md:items-center gap-2 md:gap-0 md:justify-between">
+              {/* Row 1 on mobile: date nav + new booking */}
+              <div className="flex items-center justify-between md:order-2 md:gap-3">
+                <div className="flex items-center gap-0.5">
+                  {scheduleView === 'day' && (<>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1 px-2 md:px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
+                      <span className="text-xs md:text-sm font-semibold text-foreground">FRI, MAR 20</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                  </>)}
+                  {scheduleView === 'week' && (<>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1 px-2 md:px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
+                      <span className="text-xs md:text-sm font-semibold text-foreground">MAR 16 — 22</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                  </>)}
+                  {scheduleView === 'month' && (<>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="flex items-center gap-1 px-2 md:px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
+                      <span className="text-xs md:text-sm font-semibold text-foreground">MARCH 2026</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+                  </>)}
+                  {scheduleView === 'list' && (
+                    <button className="flex items-center gap-1 px-2 md:px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
+                      <span className="text-xs md:text-sm font-semibold text-foreground">MAR 20 — MAY 14</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-md border border-border hover:bg-muted transition-colors text-xs font-bold text-muted-foreground btn-outline-modern">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filters
                   </button>
-                ))}
+                  <Button size="sm" className="h-8 md:h-9 text-xs font-bold px-3 md:px-5 btn-primary-modern">+ New</Button>
+                </div>
               </div>
-              {/* Right: date controls + filters + new booking */}
-              <div className="flex items-center gap-3">
+              {/* Row 2 on mobile: view toggle */}
+              <div className="flex items-center md:order-1">
+                <div className="flex items-center border border-border rounded-md overflow-hidden">
+                  {(['day', 'week', 'month', 'list'] as const).map((view, vi) => (
+                    <button key={view} onClick={() => setScheduleView(view)}
+                      className={`px-3 md:px-4 py-1.5 text-xs md:text-sm font-medium transition-colors ${vi > 0 ? 'border-l border-border' : ''}
+                        ${scheduleView === view ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                      {view === 'day' ? 'Day' : view === 'week' ? 'Week' : view === 'month' ? 'Month' : 'List'}
+                    </button>
+                  ))}
+                </div>
                 {scheduleView === 'list' && (
-                  <div className="relative flex items-center">
+                  <div className="relative flex items-center ml-3">
                     <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <input type="text" placeholder="Search..." className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-44 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <input type="text" placeholder="Search..." className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-36 md:w-44 focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
                 )}
-                {scheduleView === 'day' && (
-                  <div className="flex items-center gap-0.5">
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-                      <span className="text-sm font-semibold text-foreground">FRIDAY, MARCH 20, 2026</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
-                  </div>
-                )}
-                {scheduleView === 'week' && (
-                  <div className="flex items-center gap-0.5">
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-                      <span className="text-sm font-semibold text-foreground">MAR 16 — MAR 22, 2026</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
-                  </div>
-                )}
-                {scheduleView === 'month' && (
-                  <div className="flex items-center gap-0.5">
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-                      <span className="text-sm font-semibold text-foreground">MARCH 2026</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                    <button className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
-                  </div>
-                )}
-                {scheduleView === 'list' && (
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted transition-colors">
-                    <span className="text-sm font-semibold text-foreground">MAR 20 — MAY 14, 2026</span>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                )}
-                <button className="flex items-center gap-1.5 h-9 px-4 rounded-md border border-border hover:bg-muted transition-colors text-xs font-bold text-muted-foreground btn-outline-modern">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  Filters
-                </button>
-                <Button size="sm" className="h-9 text-xs font-bold px-5 btn-primary-modern">+ New Booking</Button>
               </div>
             </div>
 
@@ -941,7 +1095,7 @@ export default function HomePage() {
                 </div>
                 {/* Expanded day panel */}
                 {expandedDay !== null && (
-                  <div className="w-80 border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+                  <div className="w-full md:w-80 absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
                     <div className="flex items-center justify-between px-5 h-12 border-b shrink-0">
                       <h3 className="text-[13px] font-bold">March {expandedDay}, 2026</h3>
                       <button onClick={() => { setExpandedDay(null); setSelectedBooking(null); }} className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
@@ -1030,7 +1184,7 @@ export default function HomePage() {
             </div>
             {/* Detail panel — shared across all views */}
             {selectedBooking && (
-              <div className="w-80 border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+              <div className="w-full md:w-80 absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
                 <DetailPanel b={selectedBooking} cn={selectedCourt} vsh={vsh} onClose={() => { setSelectedBooking(null); setSelectedCourt(''); }} />
               </div>
             )}
@@ -1043,36 +1197,36 @@ export default function HomePage() {
           <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             {/* Dashboard toolbar */}
-            <div className="px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
+            <div className="px-3 md:px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
               <div className="flex items-center gap-1">
                 <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
                 <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
-                  <span className="text-sm font-semibold text-foreground">FRIDAY, MARCH 20, 2026</span>
+                  <span className="text-xs md:text-sm font-semibold text-foreground">FRI, MAR 20</span>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
                 <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold px-3">Walk-In</Button>
-                <Button size="sm" className="h-9 text-xs font-bold px-5 btn-primary-modern">+ New Booking</Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold px-3 hidden md:flex">Walk-In</Button>
+                <Button size="sm" className="h-8 md:h-9 text-xs font-bold px-3 md:px-5 btn-primary-modern">+ New</Button>
               </div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="p-3 md:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
                 {[
                   { label: 'Revenue Today', value: `$${dashTotalRevenue.toLocaleString()}`, change: '↑ 12% vs. last week', positive: true },
                   { label: 'Bookings Today', value: `${dashTotalBookings}`, change: '↑ 5 vs. last week', positive: true },
                   { label: 'Utilization', value: '72%', change: '↑ 4%', positive: true },
                   { label: 'RevPACH', value: '$48/hr', change: '↑ $3', positive: true },
                 ].map((m, i) => (
-                  <div key={i} className="border border-border rounded-lg p-4 bg-card">
-                    <p className="text-[11px] text-muted-foreground font-medium">{m.label}</p>
-                    <p className="text-2xl font-bold mt-1 tabular-nums">{m.value}</p>
-                    <p className={`text-xs font-medium mt-0.5 ${m.positive ? 'text-primary' : 'text-destructive'}`}>{m.change}</p>
+                  <div key={i} className="border border-border rounded-lg p-3 md:p-4 bg-card">
+                    <p className="text-[10px] md:text-[11px] text-muted-foreground font-medium">{m.label}</p>
+                    <p className="text-xl md:text-2xl font-bold mt-1 tabular-nums">{m.value}</p>
+                    <p className={`text-[10px] md:text-xs font-medium mt-0.5 ${m.positive ? 'text-primary' : 'text-destructive'}`}>{m.change}</p>
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-[1fr_420px] gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 md:gap-6">
                 <div className="space-y-4">
                   {(dashUnpaid.length > 0 || dashPending.length > 0) && (
                     <div className="border border-border rounded-lg bg-card">
@@ -1094,7 +1248,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     {/* Column headers */}
-                    <div className="grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2 border-b bg-muted/20 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <div className="hidden md:grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2 border-b bg-muted/20 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <span>Time</span><span>Customer</span><span>Court</span><span>Duration</span><span className="text-right">Amount</span><span className="text-right">Status</span>
                     </div>
                     {dashUpcoming.length > 0 && (<><div className="px-4 py-1.5 bg-muted/30 border-b"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Upcoming ({dashUpcoming.length})</p></div>
@@ -1102,12 +1256,12 @@ export default function HomePage() {
                         const match = visibleBookings.find(vb => vb.name === b.customer);
                         return (
                         <div key={b.id} onClick={() => { if (match) { setSelectedBooking(match); setSelectedCourt(b.court); } }}
-                          className={`grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer ${selectedBooking && match && selectedBooking.id === match.id ? 'bg-primary/5' : ''}`}>
+                          className={`grid grid-cols-[60px_1fr_auto] md:grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-2 md:gap-x-4 px-3 md:px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer ${selectedBooking && match && selectedBooking.id === match.id ? 'bg-primary/5' : ''}`}>
                           <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
                           <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
-                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right hidden md:block">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
                           <span className="text-right">
                             {b.status === 'unpaid' && <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[10px] py-0 px-1.5 font-semibold">UNPAID</Badge>}
                             {b.status === 'pending' && <Badge className="bg-warning/10 text-warning-foreground border border-warning/20 text-[10px] py-0 px-1.5 font-semibold">PENDING</Badge>}
@@ -1120,12 +1274,12 @@ export default function HomePage() {
                         const match = visibleBookings.find(vb => vb.name === b.customer);
                         return (
                         <div key={b.id} onClick={() => { if (match) { setSelectedBooking(match); setSelectedCourt(b.court); } }}
-                          className={`grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-60 ${selectedBooking && match && selectedBooking.id === match.id ? 'opacity-100 bg-primary/5' : ''}`}>
+                          className={`grid grid-cols-[60px_1fr_auto] md:grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-2 md:gap-x-4 px-3 md:px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-60 ${selectedBooking && match && selectedBooking.id === match.id ? 'opacity-100 bg-primary/5' : ''}`}>
                           <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
                           <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
-                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right hidden md:block">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
                           <span className="text-right">
                             {b.checkedIn && <span className="text-sm font-bold text-primary">✓ In</span>}
                             {b.status === 'paid' && !b.checkedIn && <span className="text-sm font-bold text-primary">✓</span>}
@@ -1139,12 +1293,12 @@ export default function HomePage() {
                     )}
                     {showAllPast && dashOlderPast.length > 0 && (<><div className="px-4 py-1.5 bg-muted/30 border-b border-t"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Earlier ({dashOlderPast.length})</p></div>
                       <div className="divide-y">{dashOlderPast.map(b => (
-                        <div key={b.id} className="grid grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-4 px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-40">
+                        <div key={b.id} className="grid grid-cols-[60px_1fr_auto] md:grid-cols-[72px_2fr_1fr_1fr_1fr_80px] gap-x-2 md:gap-x-4 px-3 md:px-4 py-2.5 items-center hover:bg-muted/30 transition-colors cursor-pointer opacity-40">
                           <span className="text-xs font-medium text-muted-foreground tabular-nums">{b.time}</span>
                           <span className="text-sm font-semibold text-foreground truncate">{b.customer}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.court}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.duration}</span>
-                          <span className="text-sm font-semibold tabular-nums text-right">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.court}</span>
+                          <span className="text-xs text-muted-foreground font-medium hidden md:block">{b.duration}</span>
+                          <span className="text-sm font-semibold tabular-nums text-right hidden md:block">{b.amount > 0 ? `$${b.amount}` : 'Comp'}</span>
                           <span className="text-right">{b.checkedIn && <span className="text-sm font-bold text-primary">✓ In</span>}</span>
                         </div>
                       ))}</div>
@@ -1198,7 +1352,7 @@ export default function HomePage() {
           </div>
           {/* Detail panel for dashboard */}
           {selectedBooking && (
-            <div className="w-80 border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+            <div className="w-full md:w-80 absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
               <DetailPanel b={selectedBooking} cn={selectedCourt} vsh={vsh} onClose={() => { setSelectedBooking(null); setSelectedCourt(''); }} />
             </div>
           )}
@@ -1219,36 +1373,33 @@ export default function HomePage() {
           const metricsMultiplier = metricsRange === '30d' ? 4.2 : metricsRange === 'all' ? 26 : 1;
           return (
           <>
-            {/* Top bar */}
-            <div className="h-16 border-b bg-card shrink-0 flex items-center justify-between px-6">
-              <h1 className="text-base font-bold text-foreground">Courts</h1>
-              <Button size="sm" className="h-9 text-xs font-bold px-5 btn-primary-modern">+ Add Court</Button>
-            </div>
-
-            {/* Toolbar — search + sport filter pills */}
-            <div className="shrink-0 border-b bg-card px-6 h-12 flex items-center justify-between">
-              <div className="relative flex items-center">
-                <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <input type="text" placeholder="Search courts..." value={courtSearchQ} onChange={e => setCourtSearchQ(e.target.value)}
-                  className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-56 focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-              {showSportPills && (
-                <div className="flex items-center border border-border rounded-md overflow-hidden">
-                  {['all', ...courtSports].map((sport, si) => (
-                    <button key={sport} onClick={() => setCourtSportFilter(sport)}
-                      className={`px-4 py-1.5 text-xs font-bold transition-colors ${si > 0 ? 'border-l border-border' : ''}
-                        ${courtSportFilter === sport ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
-                      {sport === 'all' ? 'All' : sport}
-                    </button>
-                  ))}
+            {/* Toolbar — search + sport filter pills + Add Court */}
+            <div className="shrink-0 border-b bg-card px-3 md:px-6 py-2 md:py-0 md:h-12 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center">
+                  <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <input type="text" placeholder="Search courts..." value={courtSearchQ} onChange={e => setCourtSearchQ(e.target.value)}
+                    className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-56 focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
-              )}
+                {showSportPills && (
+                  <div className="flex items-center border border-border rounded-md overflow-hidden">
+                    {['all', ...courtSports].map((sport, si) => (
+                      <button key={sport} onClick={() => setCourtSportFilter(sport)}
+                        className={`px-4 py-1.5 text-xs font-bold transition-colors ${si > 0 ? 'border-l border-border' : ''}
+                          ${courtSportFilter === sport ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                        {sport === 'all' ? 'All' : sport}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button size="sm" className="h-8 text-xs font-bold px-4 btn-primary-modern">+ Add Court</Button>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
               {/* Court cards */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="flex-1 overflow-y-auto p-3 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 md:grid-cols-3 gap-4">
                   {filteredCourts.map((court, fi) => {
                     const i = courtMgmtData.indexOf(court);
                     return (
@@ -1295,7 +1446,7 @@ export default function HomePage() {
 
               {/* Right-side detail panel */}
               {selectedCourtData !== null && (
-                <div className="w-[540px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+                <div className="w-full md:w-[540px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
                   {/* Panel header */}
                   <div className="flex items-center justify-between px-5 h-12 border-b shrink-0">
                     <div className="flex items-center gap-2">
@@ -1762,6 +1913,76 @@ export default function HomePage() {
 
       </div>
       </div>
+
+      {/* ===== COMMAND PALETTE (Cmd+K) ===== */}
+      <CommandDialog open={cmdkOpen} onOpenChange={setCmdkOpen}>
+        <CommandInput placeholder="Search pages, customers, actions..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Navigation">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <CommandItem key={item.id} onSelect={() => { setActiveNav(item.id); setCmdkOpen(false); }}
+                  className="flex items-center gap-3 cursor-pointer">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span>{item.label}</span>
+                </CommandItem>
+              );
+            })}
+            <CommandItem onSelect={() => { setActiveNav('settings'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <span>Settings</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandGroup heading="Quick Actions">
+            <CommandItem onSelect={() => { setActiveNav('home'); setActiveTab('schedule'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <span>New Booking</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('customers'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <UserPlus className="h-4 w-4 text-muted-foreground" />
+              <span>Add Customer</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('billing'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span>Record Payment</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('messages'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <span>Compose Message</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('programs'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              <span>Create Program</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandGroup heading="Views">
+            <CommandItem onSelect={() => { setActiveNav('home'); setActiveTab('schedule'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>Schedule</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('home'); setActiveTab('dashboard'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span>Dashboard</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setActiveNav('reports'); setCmdkOpen(false); }}
+              className="flex items-center gap-3 cursor-pointer">
+              <PieChart className="h-4 w-4 text-muted-foreground" />
+              <span>Reports</span>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+
     </div>
   );
 }
@@ -1819,15 +2040,15 @@ function CustomersView() {
     const c = viewingCustomer;
     return (
       <>
-        {/* Header bar */}
-        <div className="h-16 border-b bg-card shrink-0 flex items-center px-6 gap-4">
-          <button onClick={() => { setViewingCustomer(null); setDetailTab('overview'); }} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Back
+        {/* Breadcrumb sub-bar */}
+        <div className="h-11 border-b bg-card/50 shrink-0 flex items-center px-5 gap-3">
+          <button onClick={() => { setViewingCustomer(null); setDetailTab('overview'); }} className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
           </button>
-          <div className="h-5 w-px bg-border" />
-          <span className="text-sm text-muted-foreground">Customers</span>
+          <div className="h-4 w-px bg-border" />
+          <span className="text-[13px] text-muted-foreground">Customers</span>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
-          <span className="text-sm font-semibold">{c.firstName} {c.lastName}</span>
+          <span className="text-[13px] font-semibold">{c.firstName} {c.lastName}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -2458,47 +2679,41 @@ function CustomersView() {
   // ---- LIST VIEW ----
   return (
     <>
-      {/* Header */}
-      <div className="h-16 border-b bg-card shrink-0 flex items-center justify-between px-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-base font-bold text-foreground">Customers</h1>
-          <Badge variant="outline" className="text-[10px] font-semibold">{filtered.length} total</Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-9 text-xs font-bold gap-1.5 btn-outline-modern"><Download className="h-3.5 w-3.5" />Export</Button>
-          <Button size="sm" className="h-9 text-xs font-bold gap-1.5 btn-primary-modern"><UserPlus className="h-3.5 w-3.5" />Add Customer</Button>
-        </div>
-      </div>
-
-      {/* Toolbar: search + filters */}
-      <div className="shrink-0 border-b bg-card px-6 h-12 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Toolbar: search + filters + actions */}
+      <div className="shrink-0 border-b bg-card px-3 md:px-6 py-2 md:py-0 md:h-12 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           <div className="relative flex items-center">
             <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <input type="text" placeholder="Search by name, email, or phone..." value={searchQ} onChange={e => setSearchQ(e.target.value)}
-              className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-72 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input type="text" placeholder="Search..." value={searchQ} onChange={e => setSearchQ(e.target.value)}
+              className="h-8 pl-8 pr-3 rounded-md border border-border bg-background text-sm w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-8 px-3 text-xs font-semibold text-muted-foreground select-modern">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-8 px-2 md:px-3 text-xs font-semibold text-muted-foreground select-modern hidden md:block">
             <option value="all">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option>
           </select>
-          <select value={membershipFilter} onChange={e => setMembershipFilter(e.target.value)} className="h-8 px-3 text-xs font-semibold text-muted-foreground select-modern">
+          <select value={membershipFilter} onChange={e => setMembershipFilter(e.target.value)} className="h-8 px-2 md:px-3 text-xs font-semibold text-muted-foreground select-modern hidden md:block">
             <option value="all">All Memberships</option><option value="Gold">Gold</option><option value="Silver">Silver</option><option value="none">No Membership</option>
           </select>
-          <select value={tagFilter} onChange={e => setTagFilter(e.target.value)} className="h-8 px-3 text-xs font-semibold text-muted-foreground select-modern">
+          <select value={tagFilter} onChange={e => setTagFilter(e.target.value)} className="h-8 px-2 md:px-3 text-xs font-semibold text-muted-foreground select-modern hidden lg:block">
             <option value="all">All Tags</option>
             {allTags.map(t => <option key={t} value={t}>{t.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</option>)}
           </select>
-          <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="h-8 px-3 text-xs font-semibold text-muted-foreground select-modern">
+          <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="h-8 px-2 md:px-3 text-xs font-semibold text-muted-foreground select-modern hidden lg:block">
             <option value="all">All Risk Levels</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
           </select>
         </div>
-        {selectedIds.size > 0 && (
+        {selectedIds.size > 0 ? (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-muted-foreground">{selectedIds.size} selected</span>
             <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 btn-outline-modern"><Tag className="h-3 w-3" />Assign Tag</Button>
             <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 btn-outline-modern"><Send className="h-3 w-3" />Message</Button>
             <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 btn-outline-modern"><Download className="h-3 w-3" />Export</Button>
             <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 btn-outline-modern"><Ban className="h-3 w-3" />Status</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] font-semibold">{filtered.length} total</Badge>
+            <Button size="sm" variant="outline" className="h-8 text-xs font-bold gap-1.5 btn-outline-modern"><Download className="h-3.5 w-3.5" />Export</Button>
+            <Button size="sm" className="h-8 text-xs font-bold gap-1.5 btn-primary-modern"><UserPlus className="h-3.5 w-3.5" />Add Customer</Button>
           </div>
         )}
       </div>
@@ -3089,63 +3304,189 @@ const ACTIVITY_ICONS: Record<string, string> = { booking: 'bg-primary', payment:
 // BILLING VIEW
 // ============================================================
 const MOCK_TRANSACTIONS = [
-  { id: 'T001', date: 'Mar 21, 2026 2:15 PM', customer: 'Jane Doe', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •4242', status: 'succeeded' as const, fee: 1.60, net: 43.40 },
-  { id: 'T002', date: 'Mar 21, 2026 1:30 PM', customer: 'Alex Martin', type: 'membership' as const, description: 'Gold Membership — March', amount: 99, method: 'Mastercard •8811', status: 'succeeded' as const, fee: 3.17, net: 95.83 },
-  { id: 'T003', date: 'Mar 21, 2026 12:45 PM', customer: 'Tom Kim', type: 'booking' as const, description: 'Court 5 — Tennis (120 min)', amount: 90, method: 'Visa •3456', status: 'succeeded' as const, fee: 2.90, net: 87.10 },
-  { id: 'T004', date: 'Mar 21, 2026 11:20 AM', customer: 'Sarah Johnson', type: 'program' as const, description: 'PB Clinic — Spring Session', amount: 180, method: 'Apple Pay', status: 'succeeded' as const, fee: 5.52, net: 174.48 },
-  { id: 'T005', date: 'Mar 21, 2026 10:00 AM', customer: 'Mike Russo', type: 'pos' as const, description: 'Pro Shop — Paddle + Balls', amount: 65, method: 'Cash', status: 'succeeded' as const, fee: 0, net: 65 },
-  { id: 'T006', date: 'Mar 21, 2026 9:15 AM', customer: 'Emma Singh', type: 'booking' as const, description: 'Court 2 — Pickleball (60 min)', amount: 45, method: 'Google Pay', status: 'pending' as const, fee: 1.60, net: 43.40 },
-  { id: 'T007', date: 'Mar 20, 2026 8:30 PM', customer: 'Brandon Fisher', type: 'booking' as const, description: 'Court 5 — Tennis (120 min)', amount: 76.50, method: 'Amex •0011', status: 'succeeded' as const, fee: 2.68, net: 73.82 },
-  { id: 'T008', date: 'Mar 20, 2026 7:00 PM', customer: 'Lisa Park', type: 'membership' as const, description: 'Gold Membership — March (Retry)', amount: 99, method: 'Visa •9012', status: 'failed' as const, fee: 0, net: 0 },
-  { id: 'T009', date: 'Mar 20, 2026 5:45 PM', customer: 'Priya Patel', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 33.75, method: 'Visa •6789', status: 'succeeded' as const, fee: 1.28, net: 32.47 },
-  { id: 'T010', date: 'Mar 20, 2026 4:00 PM', customer: 'Kevin Nguyen', type: 'refund' as const, description: 'Refund — Court 3 Cancellation', amount: -45, method: 'Visa •2345', status: 'refunded' as const, fee: 0, net: -45 },
-  { id: 'T011', date: 'Mar 20, 2026 2:30 PM', customer: 'Rachel Gomez', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •7890', status: 'succeeded' as const, fee: 1.60, net: 43.40 },
-  { id: 'T012', date: 'Mar 20, 2026 1:00 PM', customer: 'Daniel Harris', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •6677', status: 'succeeded' as const, fee: 1.60, net: 43.40 },
-  { id: 'T013', date: 'Mar 19, 2026 6:15 PM', customer: 'Maria Santos', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 40.50, method: 'Mastercard •3344', status: 'succeeded' as const, fee: 1.45, net: 39.05 },
-  { id: 'T014', date: 'Mar 19, 2026 3:00 PM', customer: 'Chris Taylor', type: 'booking' as const, description: 'Court 2 — Pickleball (60 min)', amount: 36, method: 'Visa •1122', status: 'succeeded' as const, fee: 1.34, net: 34.66 },
-  { id: 'T015', date: 'Mar 19, 2026 10:00 AM', customer: 'Anika Sharma', type: 'pos' as const, description: 'Day Pass', amount: 55, method: 'Visa •4455', status: 'succeeded' as const, fee: 1.90, net: 53.10 },
+  { id: 'T001', date: 'Mar 21, 2026 2:15 PM', customer: 'Jane Doe', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •4242', status: 'succeeded' as const, fee: 1.60, net: 43.40, tax: 5.85, stripeId: 'ch_3PqRsT4567890abc' },
+  { id: 'T002', date: 'Mar 21, 2026 1:30 PM', customer: 'Alex Martin', type: 'membership' as const, description: 'Gold Membership — March', amount: 99, method: 'Mastercard •8811', status: 'succeeded' as const, fee: 3.17, net: 95.83, tax: 12.87, stripeId: 'ch_3PqRsT4567890abd' },
+  { id: 'T003', date: 'Mar 21, 2026 12:45 PM', customer: 'Tom Kim', type: 'booking' as const, description: 'Court 5 — Tennis (120 min)', amount: 90, method: 'Visa •3456', status: 'succeeded' as const, fee: 2.90, net: 87.10, tax: 11.70, stripeId: 'ch_3PqRsT4567890abe' },
+  { id: 'T004', date: 'Mar 21, 2026 11:20 AM', customer: 'Sarah Johnson', type: 'program' as const, description: 'PB Clinic — Spring Session', amount: 180, method: 'Apple Pay', status: 'succeeded' as const, fee: 5.52, net: 174.48, tax: 23.40, stripeId: 'ch_3PqRsT4567890abf' },
+  { id: 'T005', date: 'Mar 21, 2026 10:00 AM', customer: 'Mike Russo', type: 'pos' as const, description: 'Pro Shop — Paddle + Balls', amount: 65, method: 'Cash', status: 'succeeded' as const, fee: 0, net: 65, tax: 8.45, stripeId: '' },
+  { id: 'T006', date: 'Mar 21, 2026 9:15 AM', customer: 'Emma Singh', type: 'booking' as const, description: 'Court 2 — Pickleball (60 min)', amount: 45, method: 'Google Pay', status: 'pending' as const, fee: 1.60, net: 43.40, tax: 5.85, stripeId: 'pi_3PqRsT4567890abg' },
+  { id: 'T007', date: 'Mar 20, 2026 8:30 PM', customer: 'Brandon Fisher', type: 'booking' as const, description: 'Court 5 — Tennis (120 min)', amount: 76.50, method: 'Amex •0011', status: 'succeeded' as const, fee: 2.68, net: 73.82, tax: 9.95, stripeId: 'ch_3PqRsT4567890abh' },
+  { id: 'T008', date: 'Mar 20, 2026 7:00 PM', customer: 'Lisa Park', type: 'membership' as const, description: 'Gold Membership — March (Retry)', amount: 99, method: 'Visa •9012', status: 'failed' as const, fee: 0, net: 0, tax: 0, stripeId: 'pi_3PqRsT4567890abi' },
+  { id: 'T009', date: 'Mar 20, 2026 5:45 PM', customer: 'Priya Patel', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 33.75, method: 'Visa •6789', status: 'succeeded' as const, fee: 1.28, net: 32.47, tax: 4.39, stripeId: 'ch_3PqRsT4567890abj' },
+  { id: 'T010', date: 'Mar 20, 2026 4:00 PM', customer: 'Kevin Nguyen', type: 'refund' as const, description: 'Refund — Court 3 Cancellation', amount: -45, method: 'Visa •2345', status: 'refunded' as const, fee: 0, net: -45, tax: -5.85, stripeId: 're_3PqRsT4567890abk' },
+  { id: 'T011', date: 'Mar 20, 2026 2:30 PM', customer: 'Rachel Gomez', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •7890', status: 'succeeded' as const, fee: 1.60, net: 43.40, tax: 5.85, stripeId: 'ch_3PqRsT4567890abl' },
+  { id: 'T012', date: 'Mar 20, 2026 1:00 PM', customer: 'Daniel Harris', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 45, method: 'Visa •6677', status: 'succeeded' as const, fee: 1.60, net: 43.40, tax: 5.85, stripeId: 'ch_3PqRsT4567890abm' },
+  { id: 'T013', date: 'Mar 19, 2026 6:15 PM', customer: 'Maria Santos', type: 'booking' as const, description: 'Court 1 — Pickleball (60 min)', amount: 40.50, method: 'Mastercard •3344', status: 'succeeded' as const, fee: 1.45, net: 39.05, tax: 5.27, stripeId: 'ch_3PqRsT4567890abn' },
+  { id: 'T014', date: 'Mar 19, 2026 3:00 PM', customer: 'Chris Taylor', type: 'booking' as const, description: 'Court 2 — Pickleball (60 min)', amount: 36, method: 'Visa •1122', status: 'succeeded' as const, fee: 1.34, net: 34.66, tax: 4.68, stripeId: 'ch_3PqRsT4567890abo' },
+  { id: 'T015', date: 'Mar 19, 2026 10:00 AM', customer: 'Anika Sharma', type: 'pos' as const, description: 'Day Pass', amount: 55, method: 'Visa •4455', status: 'succeeded' as const, fee: 1.90, net: 53.10, tax: 7.15, stripeId: 'ch_3PqRsT4567890abp' },
 ];
 const MOCK_INVOICES = [
-  { id: 'INV001', number: 'INV-2026-001234', customer: 'Acme Corp', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 31, 2026', amount: 2500, paid: 2500, outstanding: 0, status: 'paid' as const },
-  { id: 'INV002', number: 'INV-2026-001235', customer: 'SportsCo Inc.', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 31, 2026', amount: 1200, paid: 600, outstanding: 600, status: 'partial' as const },
-  { id: 'INV003', number: 'INV-2026-001236', customer: 'City Rec League', dateIssued: 'Feb 15, 2026', dueDate: 'Mar 15, 2026', amount: 800, paid: 0, outstanding: 800, status: 'overdue' as const },
-  { id: 'INV004', number: 'INV-2026-001237', customer: 'Jane Doe', dateIssued: 'Mar 15, 2026', dueDate: 'Apr 15, 2026', amount: 99, paid: 0, outstanding: 99, status: 'sent' as const },
-  { id: 'INV005', number: 'INV-2026-001238', customer: 'Tom Kim', dateIssued: 'Mar 20, 2026', dueDate: 'Apr 20, 2026', amount: 297, paid: 99, outstanding: 198, status: 'partial' as const },
-  { id: 'INV006', number: 'INV-2026-001239', customer: 'Lisa Park', dateIssued: 'Mar 21, 2026', dueDate: '', amount: 99, paid: 0, outstanding: 99, status: 'draft' as const },
-  { id: 'INV007', number: 'INV-2026-001240', customer: 'Brandon Fisher', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 15, 2026', amount: 297, paid: 297, outstanding: 0, status: 'paid' as const },
-  { id: 'INV008', number: 'INV-2026-001241', customer: 'Youth League Assoc.', dateIssued: 'Mar 10, 2026', dueDate: 'Apr 10, 2026', amount: 450, paid: 0, outstanding: 450, status: 'sent' as const },
+  { id: 'INV001', number: 'INV-2026-001234', customer: 'Acme Corp', email: 'billing@acme.com', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 31, 2026', amount: 2500, paid: 2500, outstanding: 0, status: 'paid' as const, lineItems: [{ desc: 'Court 6 — Basketball (60 min) × 20', qty: 20, unitPrice: 60, amount: 1200 }, { desc: 'Court 6 — Basketball (90 min) × 8', qty: 8, unitPrice: 90, amount: 720 }, { desc: 'Court 5 — Tennis (120 min) × 4', qty: 4, unitPrice: 90, amount: 360 }, { desc: 'Equipment Rental', qty: 1, unitPrice: 220, amount: 220 }], subtotal: 2500, tax: 325, paymentMethod: 'Interac e-Transfer', paidDate: 'Mar 25, 2026', notes: 'Monthly corporate booking package — March 2026' },
+  { id: 'INV002', number: 'INV-2026-001235', customer: 'SportsCo Inc.', email: 'ap@sportsco.com', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 31, 2026', amount: 1200, paid: 600, outstanding: 600, status: 'partial' as const, lineItems: [{ desc: 'Court 1 — Pickleball (60 min) × 15', qty: 15, unitPrice: 45, amount: 675 }, { desc: 'Court 3 — Pickleball (60 min) × 10', qty: 10, unitPrice: 45, amount: 450 }, { desc: 'Equipment Rental', qty: 1, unitPrice: 75, amount: 75 }], subtotal: 1200, tax: 156, paymentMethod: 'Check #4521', paidDate: 'Mar 15, 2026', notes: 'Partial payment received — remaining $600 due by EOM' },
+  { id: 'INV003', number: 'INV-2026-001236', customer: 'City Rec League', email: 'league@cityrecreation.ca', dateIssued: 'Feb 15, 2026', dueDate: 'Mar 15, 2026', amount: 800, paid: 0, outstanding: 800, status: 'overdue' as const, lineItems: [{ desc: 'Court 6 — Basketball League (2hr) × 4', qty: 4, unitPrice: 120, amount: 480 }, { desc: 'Referee Fees', qty: 4, unitPrice: 50, amount: 200 }, { desc: 'Scorekeeping', qty: 4, unitPrice: 30, amount: 120 }], subtotal: 800, tax: 104, paymentMethod: '', paidDate: '', notes: 'Follow up sent Mar 18. Contact: Mike — 416-555-3210' },
+  { id: 'INV004', number: 'INV-2026-001237', customer: 'Jane Doe', email: 'jane.doe@email.com', dateIssued: 'Mar 15, 2026', dueDate: 'Apr 15, 2026', amount: 99, paid: 0, outstanding: 99, status: 'sent' as const, lineItems: [{ desc: 'Gold Membership — April 2026', qty: 1, unitPrice: 99, amount: 99 }], subtotal: 99, tax: 12.87, paymentMethod: '', paidDate: '', notes: '' },
+  { id: 'INV005', number: 'INV-2026-001238', customer: 'Tom Kim', email: 'tom.k@email.com', dateIssued: 'Mar 20, 2026', dueDate: 'Apr 20, 2026', amount: 297, paid: 99, outstanding: 198, status: 'partial' as const, lineItems: [{ desc: 'Gold Membership — Mar', qty: 1, unitPrice: 99, amount: 99 }, { desc: 'Gold Membership — Apr', qty: 1, unitPrice: 99, amount: 99 }, { desc: 'Gold Membership — May', qty: 1, unitPrice: 99, amount: 99 }], subtotal: 297, tax: 38.61, paymentMethod: 'Visa •3456', paidDate: 'Mar 22, 2026', notes: 'Quarterly membership prepay' },
+  { id: 'INV006', number: 'INV-2026-001239', customer: 'Lisa Park', email: 'lisa.park@email.com', dateIssued: 'Mar 21, 2026', dueDate: '', amount: 99, paid: 0, outstanding: 99, status: 'draft' as const, lineItems: [{ desc: 'Gold Membership — April 2026', qty: 1, unitPrice: 99, amount: 99 }], subtotal: 99, tax: 12.87, paymentMethod: '', paidDate: '', notes: 'Failed payment retry exhausted — convert to invoice' },
+  { id: 'INV007', number: 'INV-2026-001240', customer: 'Brandon Fisher', email: 'brandon.f@email.com', dateIssued: 'Mar 1, 2026', dueDate: 'Mar 15, 2026', amount: 297, paid: 297, outstanding: 0, status: 'paid' as const, lineItems: [{ desc: 'Court 5 — Tennis (120 min) × 3', qty: 3, unitPrice: 76.50, amount: 229.50 }, { desc: 'Ball Machine Rental × 3', qty: 3, unitPrice: 10, amount: 30 }, { desc: 'Locker Rental — March', qty: 1, unitPrice: 37.50, amount: 37.50 }], subtotal: 297, tax: 38.61, paymentMethod: 'Amex •0011', paidDate: 'Mar 10, 2026', notes: '' },
+  { id: 'INV008', number: 'INV-2026-001241', customer: 'Youth League Assoc.', email: 'treasurer@youthleague.org', dateIssued: 'Mar 10, 2026', dueDate: 'Apr 10, 2026', amount: 450, paid: 0, outstanding: 450, status: 'sent' as const, lineItems: [{ desc: 'Court 6 — Youth Basketball (90 min) × 4', qty: 4, unitPrice: 75, amount: 300 }, { desc: 'Equipment — Balls & Cones', qty: 1, unitPrice: 50, amount: 50 }, { desc: 'Coaching Support', qty: 4, unitPrice: 25, amount: 100 }], subtotal: 450, tax: 58.50, paymentMethod: '', paidDate: '', notes: 'Spring session — first invoice' },
+];
+
+// Invoice customers for Create Invoice wizard
+const INVOICE_CUSTOMERS = [
+  { id: 'C001', name: 'Acme Corp', email: 'billing@acme.com', phone: '+1 (416) 555-9999', unpaidBookings: 12, unpaidTotal: 2160 },
+  { id: 'C002', name: 'SportsCo Inc.', email: 'ap@sportsco.com', phone: '+1 (647) 555-8888', unpaidBookings: 8, unpaidTotal: 960 },
+  { id: 'C003', name: 'City Rec League', email: 'league@cityrecreation.ca', phone: '+1 (416) 555-3210', unpaidBookings: 4, unpaidTotal: 640 },
+  { id: 'C004', name: 'Jane Doe', email: 'jane.doe@email.com', phone: '+1 (416) 555-1234', unpaidBookings: 0, unpaidTotal: 0 },
+  { id: 'C005', name: 'Youth League Assoc.', email: 'treasurer@youthleague.org', phone: '+1 (905) 555-7777', unpaidBookings: 6, unpaidTotal: 540 },
+];
+// Mock unpaid bookings for invoice wizard
+const MOCK_UNPAID_BOOKINGS = [
+  { id: 'UB01', date: 'Mar 5, 2026', court: 'Court 6', sport: 'Basketball', duration: '60 min', amount: 60, selected: true },
+  { id: 'UB02', date: 'Mar 7, 2026', court: 'Court 6', sport: 'Basketball', duration: '60 min', amount: 60, selected: true },
+  { id: 'UB03', date: 'Mar 10, 2026', court: 'Court 6', sport: 'Basketball', duration: '90 min', amount: 90, selected: true },
+  { id: 'UB04', date: 'Mar 12, 2026', court: 'Court 6', sport: 'Basketball', duration: '60 min', amount: 60, selected: true },
+  { id: 'UB05', date: 'Mar 14, 2026', court: 'Court 5', sport: 'Tennis', duration: '120 min', amount: 90, selected: true },
+  { id: 'UB06', date: 'Mar 17, 2026', court: 'Court 6', sport: 'Basketball', duration: '60 min', amount: 60, selected: false },
+  { id: 'UB07', date: 'Mar 19, 2026', court: 'Court 6', sport: 'Basketball', duration: '90 min', amount: 90, selected: false },
+  { id: 'UB08', date: 'Mar 21, 2026', court: 'Court 5', sport: 'Tennis', duration: '120 min', amount: 90, selected: false },
+];
+
+// Reports data
+const REPORT_REVENUE_DAILY = [
+  { date: 'Mar 21', bookings: 2847, memberships: 198, programs: 180, pos: 120, total: 3345 },
+  { date: 'Mar 20', bookings: 2210, memberships: 99, programs: 0, pos: 85, total: 2394 },
+  { date: 'Mar 19', bookings: 1890, memberships: 297, programs: 360, pos: 55, total: 2602 },
+  { date: 'Mar 18', bookings: 1650, memberships: 0, programs: 0, pos: 210, total: 1860 },
+  { date: 'Mar 17', bookings: 2420, memberships: 198, programs: 180, pos: 95, total: 2893 },
+  { date: 'Mar 16', bookings: 1980, memberships: 0, programs: 0, pos: 150, total: 2130 },
+  { date: 'Mar 15', bookings: 2100, memberships: 99, programs: 540, pos: 180, total: 2919 },
+];
+const REPORT_AR_AGING = [
+  { bucket: 'Current (0 days)', customers: 3, amount: 648, pct: 21 },
+  { bucket: '1–15 days', customers: 2, amount: 649, pct: 21 },
+  { bucket: '16–30 days', customers: 1, amount: 800, pct: 26 },
+  { bucket: '31–60 days', customers: 0, amount: 0, pct: 0 },
+  { bucket: '60+ days', customers: 1, amount: 950, pct: 32 },
+];
+const REPORT_PAYMENT_METHODS = [
+  { method: 'Visa', count: 142, amount: 8540, pct: 44.2 },
+  { method: 'Mastercard', count: 38, amount: 3420, pct: 17.7 },
+  { method: 'Apple Pay', count: 29, amount: 2180, pct: 11.3 },
+  { method: 'Google Pay', count: 22, amount: 1540, pct: 8.0 },
+  { method: 'Amex', count: 18, amount: 1620, pct: 8.4 },
+  { method: 'Cash', count: 15, amount: 975, pct: 5.0 },
+  { method: 'Interac e-Transfer', count: 8, amount: 680, pct: 3.5 },
+  { method: 'Account Credit', count: 5, amount: 375, pct: 1.9 },
+];
+const REPORT_PAYOUTS = [
+  { id: 'po_1', date: 'Mar 21, 2026', arrival: 'Mar 23, 2026', amount: 3120.45, txCount: 28, status: 'in_transit' as const },
+  { id: 'po_2', date: 'Mar 19, 2026', arrival: 'Mar 21, 2026', amount: 4280.10, txCount: 35, status: 'paid' as const },
+  { id: 'po_3', date: 'Mar 17, 2026', arrival: 'Mar 19, 2026', amount: 2890.55, txCount: 22, status: 'paid' as const },
+  { id: 'po_4', date: 'Mar 14, 2026', arrival: 'Mar 17, 2026', amount: 5150.20, txCount: 41, status: 'paid' as const },
+  { id: 'po_5', date: 'Mar 12, 2026', arrival: 'Mar 14, 2026', amount: 3670.80, txCount: 30, status: 'paid' as const },
 ];
 
 function BillingView() {
   const [tab, setTab] = useState('Overview');
   const [selectedTx, setSelectedTx] = useState<typeof MOCK_TRANSACTIONS[0] | null>(null);
+  const [selectedInv, setSelectedInv] = useState<typeof MOCK_INVOICES[0] | null>(null);
   const [search, setSearch] = useState('');
+  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+  const [txTypeFilter, setTxTypeFilter] = useState('all');
+  const [txStatusFilter, setTxStatusFilter] = useState('all');
+  const [invStatusFilter, setInvStatusFilter] = useState('all');
+  // Create Invoice wizard
+  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardCustomer, setWizardCustomer] = useState<typeof INVOICE_CUSTOMERS[0] | null>(null);
+  const [wizardCustomerSearch, setWizardCustomerSearch] = useState('');
+  const [wizardBookings, setWizardBookings] = useState(MOCK_UNPAID_BOOKINGS.map(b => ({ ...b })));
+  const [wizardNotes, setWizardNotes] = useState('');
+  // Reports
+  const [reportType, setReportType] = useState('revenue');
+
+  const filteredTx = MOCK_TRANSACTIONS.filter(tx => {
+    if (search && !tx.customer.toLowerCase().includes(search.toLowerCase())) return false;
+    if (txTypeFilter !== 'all' && tx.type !== txTypeFilter) return false;
+    if (txStatusFilter !== 'all' && tx.status !== txStatusFilter) return false;
+    return true;
+  });
+  const filteredInv = MOCK_INVOICES.filter(inv => {
+    if (search && !inv.customer.toLowerCase().includes(search.toLowerCase()) && !inv.number.toLowerCase().includes(search.toLowerCase())) return false;
+    if (invStatusFilter !== 'all' && inv.status !== invStatusFilter) return false;
+    return true;
+  });
+
+  const periodRevenue = period === 'today' ? { value: '$2,847', txCount: 12, trend: '↑ 18% vs yesterday', trendUp: true } : period === 'week' ? { value: '$14,230', txCount: 84, trend: '↑ 12% vs last week', trendUp: true } : { value: '$48,650', txCount: 312, trend: '↑ 8% vs last month', trendUp: true };
+
+  const wizardSelectedBookings = wizardBookings.filter(b => b.selected);
+  const wizardSubtotal = wizardSelectedBookings.reduce((s, b) => s + b.amount, 0);
+  const wizardTax = Math.round(wizardSubtotal * 0.13 * 100) / 100;
+  const wizardTotal = wizardSubtotal + wizardTax;
+
+  const resetWizard = () => { setShowCreateInvoice(false); setWizardStep(1); setWizardCustomer(null); setWizardCustomerSearch(''); setWizardBookings(MOCK_UNPAID_BOOKINGS.map(b => ({ ...b }))); setWizardNotes(''); };
+
+  // Close detail panels when switching tabs
+  const handleTabChange = (t: string) => { setTab(t); setSelectedTx(null); setSelectedInv(null); setSearch(''); };
+
   return (
     <>
-      <SPageHeader title="Billing"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Record Payment</Button></SPageHeader>
-      <STabBar tabs={['Overview', 'Transactions', 'Invoices']} active={tab} onChange={setTab} />
+      <SPageHeader title="Billing">
+        <Button variant="outline" className="h-9 text-xs font-bold px-4 btn-outline-modern"><Download className="w-3.5 h-3.5 mr-1.5" />Export</Button>
+        <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setShowCreateInvoice(true)}><Plus className="w-3.5 h-3.5 mr-1.5" />Create Invoice</Button>
+      </SPageHeader>
+      <STabBar tabs={['Overview', 'Transactions', 'Invoices', 'Reports']} active={tab} onChange={handleTabChange} />
       <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
+
+        {/* ===== OVERVIEW TAB ===== */}
         {tab === 'Overview' && (<>
-          <div className="grid grid-cols-4 gap-4">
-            <SMetricCard label="Revenue Today" value="$2,847" />
-            <SMetricCard label="This Week" value="$14,230" trend="↑ 12% vs last week" trendUp={true} />
-            <SMetricCard label="This Month" value="$48,650" trend="↑ 8% vs last month" trendUp={true} />
-            <SMetricCard label="Outstanding" value="$3,420" trend="4 unpaid invoices" />
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            {([['today', 'Today'], ['week', 'Last 7 Days'], ['month', 'This Month']] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setPeriod(key)} className={`h-8 px-4 rounded-md text-xs font-bold transition-colors ${period === key ? 'bg-foreground text-background' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}>{label}</button>
+            ))}
           </div>
+
+          {/* Revenue ticker */}
+          <div className="card-elevated rounded-lg p-5 flex items-center gap-6">
+            <div>
+              <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Revenue ({period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'})</div>
+              <div className="text-3xl font-bold mt-1">{periodRevenue.value}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`text-xs font-medium flex items-center gap-1 ${periodRevenue.trendUp ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                  {periodRevenue.trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}{periodRevenue.trend}
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">· {periodRevenue.txCount} transactions</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Metric cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SMetricCard label="Outstanding" value="$3,420" trend="4 unpaid invoices · 1 overdue" />
+            <SMetricCard label="Refunds" value="$245" trend="3 refunds this month" />
+            <SMetricCard label="Account Credits" value="$175" trend="5 credits issued" />
+          </div>
+
+          {/* Recent Transactions */}
           <div className="card-elevated rounded-lg">
-            <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-bold">Recent Transactions</h2></div>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-bold">Recent Transactions</h2>
+              <button onClick={() => handleTabChange('Transactions')} className="text-xs font-semibold text-primary hover:underline">View All</button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead><tr className="border-b border-border">
-                  {['Date', 'Customer', 'Type', 'Amount', 'Method', 'Status'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
+                  {['Date', 'Customer', 'Type', 'Description', 'Amount', 'Method', 'Status'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
                 </tr></thead>
                 <tbody>{MOCK_TRANSACTIONS.slice(0, 8).map(tx => (
-                  <tr key={tx.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedTx(tx)}>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.date}</td>
+                  <tr key={tx.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => { handleTabChange('Transactions'); setSelectedTx(tx); }}>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{tx.date}</td>
                     <td className="px-4 py-2.5 text-sm font-medium">{tx.customer}</td>
                     <td className="px-4 py-2.5"><StatusBadge status={tx.type} /></td>
-                    <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${Math.abs(tx.amount).toFixed(2)}{tx.amount < 0 && <span className="text-red-500 ml-1">CR</span>}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium max-w-48 truncate">{tx.description}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.amount < 0 ? <span className="text-red-500">-${Math.abs(tx.amount).toFixed(2)}</span> : `$${tx.amount.toFixed(2)}`}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.method}</td>
                     <td className="px-4 py-2.5"><StatusBadge status={tx.status} /></td>
                   </tr>
@@ -3153,105 +3494,505 @@ function BillingView() {
               </table>
             </div>
           </div>
+
+          {/* Payment Method Breakdown (mini) */}
+          <div className="card-elevated rounded-lg">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-bold">Payment Methods (This Month)</h2>
+              <button onClick={() => { handleTabChange('Reports'); setReportType('methods'); }} className="text-xs font-semibold text-primary hover:underline">Full Report</button>
+            </div>
+            <div className="p-4 space-y-2">
+              {REPORT_PAYMENT_METHODS.slice(0, 4).map(pm => (
+                <div key={pm.method} className="flex items-center gap-3">
+                  <span className="text-xs font-medium w-24 shrink-0">{pm.method}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pm.pct}%` }} /></div>
+                  <span className="text-xs font-bold tabular-nums w-14 text-right">{pm.pct}%</span>
+                  <span className="text-xs text-muted-foreground font-medium tabular-nums w-20 text-right">${pm.amount.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </>)}
+
+        {/* ===== TRANSACTIONS TAB ===== */}
         {tab === 'Transactions' && (<>
           <SToolbar>
             <SSearchInput placeholder="Search by name or email..." value={search} onChange={setSearch} />
-            <SFilterPill label="This Week" active={true} onClick={() => {}} />
-            <SFilterPill label="All Types" active={false} onClick={() => {}} />
-            <SFilterPill label="All Status" active={false} onClick={() => {}} />
+            <SFilterPill label="All Types" active={txTypeFilter === 'all'} onClick={() => setTxTypeFilter('all')} />
+            <SFilterPill label="Bookings" active={txTypeFilter === 'booking'} onClick={() => setTxTypeFilter(txTypeFilter === 'booking' ? 'all' : 'booking')} />
+            <SFilterPill label="Memberships" active={txTypeFilter === 'membership'} onClick={() => setTxTypeFilter(txTypeFilter === 'membership' ? 'all' : 'membership')} />
+            <SFilterPill label={txStatusFilter === 'all' ? 'All Status' : txStatusFilter} active={txStatusFilter !== 'all'} onClick={() => setTxStatusFilter(txStatusFilter === 'all' ? 'succeeded' : txStatusFilter === 'succeeded' ? 'failed' : txStatusFilter === 'failed' ? 'pending' : 'all')} />
             <div className="flex-1" />
             <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export</Button>
           </SToolbar>
           <div className="card-elevated rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead><tr className="border-b border-border">
-                {['Date', 'Customer', 'Type', 'Description', 'Amount', 'Method', 'Status', 'Fee', 'Net', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
+                {['Date', 'Customer', 'Type', 'Description', 'Amount', 'Tax', 'Method', 'Status', 'Fee', 'Net', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
               </tr></thead>
-              <tbody>{MOCK_TRANSACTIONS.filter(tx => !search || tx.customer.toLowerCase().includes(search.toLowerCase())).map(tx => (
-                <tr key={tx.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedTx(tx)}>
+              <tbody>{filteredTx.map(tx => (
+                <tr key={tx.id} className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${selectedTx?.id === tx.id ? 'bg-primary/5' : ''}`} onClick={() => { setSelectedTx(tx); setSelectedInv(null); }}>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{tx.date}</td>
                   <td className="px-4 py-2.5 text-sm font-medium">{tx.customer}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={tx.type} /></td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium max-w-48 truncate">{tx.description}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.amount < 0 ? `-$${Math.abs(tx.amount).toFixed(2)}` : `$${tx.amount.toFixed(2)}`}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.amount < 0 ? <span className="text-red-500">-${Math.abs(tx.amount).toFixed(2)}</span> : `$${tx.amount.toFixed(2)}`}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums font-medium">{tx.tax !== 0 ? `$${Math.abs(tx.tax).toFixed(2)}` : '—'}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.method}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={tx.status} /></td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums font-medium">${tx.fee.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.net < 0 ? `-$${Math.abs(tx.net).toFixed(2)}` : `$${tx.net.toFixed(2)}`}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums font-medium">{tx.fee > 0 ? `$${tx.fee.toFixed(2)}` : '—'}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.net < 0 ? <span className="text-red-500">-${Math.abs(tx.net).toFixed(2)}</span> : tx.net > 0 ? `$${tx.net.toFixed(2)}` : '—'}</td>
                   <td className="px-4 py-2.5"><button className="p-1 rounded hover:bg-muted"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button></td>
                 </tr>
               ))}</tbody>
             </table>
+            {filteredTx.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground font-medium">No transactions match your filters.</div>}
           </div>
         </>)}
+
+        {/* ===== INVOICES TAB ===== */}
         {tab === 'Invoices' && (<>
           <SToolbar>
             <SSearchInput placeholder="Search invoices..." value={search} onChange={setSearch} />
-            <SFilterPill label="All Status" active={true} onClick={() => {}} />
-            <SFilterPill label="This Month" active={false} onClick={() => {}} />
+            <SFilterPill label="All" active={invStatusFilter === 'all'} onClick={() => setInvStatusFilter('all')} />
+            <SFilterPill label="Sent" active={invStatusFilter === 'sent'} onClick={() => setInvStatusFilter(invStatusFilter === 'sent' ? 'all' : 'sent')} />
+            <SFilterPill label="Overdue" active={invStatusFilter === 'overdue'} onClick={() => setInvStatusFilter(invStatusFilter === 'overdue' ? 'all' : 'overdue')} />
+            <SFilterPill label="Partial" active={invStatusFilter === 'partial'} onClick={() => setInvStatusFilter(invStatusFilter === 'partial' ? 'all' : 'partial')} />
+            <SFilterPill label="Draft" active={invStatusFilter === 'draft'} onClick={() => setInvStatusFilter(invStatusFilter === 'draft' ? 'all' : 'draft')} />
+            <div className="flex-1" />
+            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export</Button>
+            <Button className="h-8 text-xs font-bold btn-primary-modern" onClick={() => setShowCreateInvoice(true)}><Plus className="w-3 h-3 mr-1.5" />Create Invoice</Button>
           </SToolbar>
           <div className="card-elevated rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead><tr className="border-b border-border">
                 {['Invoice #', 'Customer', 'Issued', 'Due', 'Amount', 'Paid', 'Outstanding', 'Status', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
               </tr></thead>
-              <tbody>{MOCK_INVOICES.map(inv => (
-                <tr key={inv.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
+              <tbody>{filteredInv.map(inv => (
+                <tr key={inv.id} className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${selectedInv?.id === inv.id ? 'bg-primary/5' : ''}`} onClick={() => { setSelectedInv(inv); setSelectedTx(null); }}>
                   <td className="px-4 py-2.5 text-sm font-bold text-primary">{inv.number}</td>
                   <td className="px-4 py-2.5 text-sm font-medium">{inv.customer}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{inv.dateIssued}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{inv.dueDate || '—'}</td>
                   <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${inv.amount.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${inv.paid.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-sm font-bold tabular-nums">{inv.outstanding > 0 ? `$${inv.outstanding.toFixed(2)}` : '—'}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums text-green-600">{inv.paid > 0 ? `$${inv.paid.toFixed(2)}` : '—'}</td>
+                  <td className="px-4 py-2.5 text-sm font-bold tabular-nums">{inv.outstanding > 0 ? <span className={inv.status === 'overdue' ? 'text-red-500' : ''}>${inv.outstanding.toFixed(2)}</span> : '—'}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={inv.status} /></td>
                   <td className="px-4 py-2.5"><button className="p-1 rounded hover:bg-muted"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button></td>
                 </tr>
               ))}</tbody>
             </table>
+            {filteredInv.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground font-medium">No invoices match your filters.</div>}
           </div>
         </>)}
+
+        {/* ===== REPORTS TAB ===== */}
+        {tab === 'Reports' && (<>
+          {/* Report type selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {[['revenue', 'Daily Revenue'], ['aging', 'AR Aging'], ['methods', 'Payment Methods'], ['payouts', 'Payouts']].map(([key, label]) => (
+              <button key={key} onClick={() => setReportType(key)} className={`h-8 px-4 rounded-md text-xs font-bold transition-colors ${reportType === key ? 'bg-foreground text-background' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}>{label}</button>
+            ))}
+            <div className="flex-1" />
+            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export CSV</Button>
+            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><FileText className="w-3 h-3 mr-1.5" />Export PDF</Button>
+          </div>
+
+          {/* Daily Revenue Summary */}
+          {reportType === 'revenue' && (
+            <div className="card-elevated rounded-lg">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <h2 className="text-sm font-bold">Daily Revenue Summary</h2>
+                <span className="text-xs text-muted-foreground font-medium">Last 7 days</span>
+              </div>
+              {/* Mini bar chart */}
+              <div className="px-4 pt-4 pb-2 flex items-end gap-2 h-32">
+                {REPORT_REVENUE_DAILY.map(d => {
+                  const maxRev = Math.max(...REPORT_REVENUE_DAILY.map(r => r.total));
+                  const h = (d.total / maxRev) * 100;
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[9px] font-bold tabular-nums text-muted-foreground">${(d.total / 1000).toFixed(1)}k</span>
+                      <div className="w-full rounded-t" style={{ height: `${h}%`, background: 'oklch(0.62 0.12 192 / 0.7)' }} />
+                      <span className="text-[9px] font-medium text-muted-foreground">{d.date}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="border-b border-t border-border">
+                    {['Date', 'Bookings', 'Memberships', 'Programs', 'POS', 'Total'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                  </tr></thead>
+                  <tbody>{REPORT_REVENUE_DAILY.map(d => (
+                    <tr key={d.date} className="border-b border-border/50">
+                      <td className="px-4 py-2.5 text-sm font-medium">{d.date}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">${d.bookings.toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">${d.memberships.toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">{d.programs > 0 ? `$${d.programs.toLocaleString()}` : '—'}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">${d.pos.toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-bold">${d.total.toLocaleString()}</td>
+                    </tr>
+                  ))}</tbody>
+                  <tfoot><tr className="border-t-2 border-border bg-muted/20">
+                    <td className="px-4 py-2.5 text-sm font-bold">Total</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_REVENUE_DAILY.reduce((s, d) => s + d.bookings, 0).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_REVENUE_DAILY.reduce((s, d) => s + d.memberships, 0).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_REVENUE_DAILY.reduce((s, d) => s + d.programs, 0).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_REVENUE_DAILY.reduce((s, d) => s + d.pos, 0).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_REVENUE_DAILY.reduce((s, d) => s + d.total, 0).toLocaleString()}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* AR Aging Report */}
+          {reportType === 'aging' && (
+            <div className="card-elevated rounded-lg">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <h2 className="text-sm font-bold">Accounts Receivable — Aging Summary</h2>
+                <span className="text-xs text-muted-foreground font-medium">Total Outstanding: ${REPORT_AR_AGING.reduce((s, r) => s + r.amount, 0).toLocaleString()}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="border-b border-border">
+                    {['Age Bucket', 'Customers', 'Amount', '% of Total', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                  </tr></thead>
+                  <tbody>{REPORT_AR_AGING.map(r => (
+                    <tr key={r.bucket} className="border-b border-border/50">
+                      <td className="px-4 py-2.5 text-sm font-medium">{r.bucket}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">{r.customers}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-bold">{r.amount > 0 ? `$${r.amount.toLocaleString()}` : '—'}</td>
+                      <td className="px-4 py-2.5"><div className="flex items-center gap-2"><div className="w-24 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.bucket.includes('60+') ? '#ef4444' : r.bucket.includes('31') ? '#f59e0b' : r.bucket.includes('16') ? '#eab308' : 'oklch(0.62 0.12 192)' }} /></div><span className="text-xs font-medium tabular-nums">{r.pct}%</span></div></td>
+                      <td className="px-4 py-2.5">{r.amount > 0 && <button className="text-xs font-semibold text-primary hover:underline">View</button>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Methods Report */}
+          {reportType === 'methods' && (
+            <div className="card-elevated rounded-lg">
+              <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-bold">Payment Method Breakdown — This Month</h2></div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="border-b border-border">
+                    {['Method', 'Transactions', 'Revenue', '% of Total', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                  </tr></thead>
+                  <tbody>{REPORT_PAYMENT_METHODS.map(pm => (
+                    <tr key={pm.method} className="border-b border-border/50">
+                      <td className="px-4 py-2.5 text-sm font-medium">{pm.method}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-medium">{pm.count}</td>
+                      <td className="px-4 py-2.5 text-sm tabular-nums font-bold">${pm.amount.toLocaleString()}</td>
+                      <td className="px-4 py-2.5"><div className="flex items-center gap-2"><div className="w-24 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pm.pct}%` }} /></div><span className="text-xs font-medium tabular-nums">{pm.pct}%</span></div></td>
+                      <td />
+                    </tr>
+                  ))}</tbody>
+                  <tfoot><tr className="border-t-2 border-border bg-muted/20">
+                    <td className="px-4 py-2.5 text-sm font-bold">Total</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">{REPORT_PAYMENT_METHODS.reduce((s, p) => s + p.count, 0)}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${REPORT_PAYMENT_METHODS.reduce((s, p) => s + p.amount, 0).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-bold">100%</td>
+                    <td />
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Payouts Report */}
+          {reportType === 'payouts' && (
+            <div className="space-y-4">
+              <div className="card-elevated rounded-lg p-4 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-primary" /></div>
+                <div className="flex-1">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Stripe Connect</div>
+                  <div className="text-sm font-bold">Connected · Courtside Sports Complex</div>
+                </div>
+                <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><ExternalLink className="w-3 h-3 mr-1.5" />Stripe Dashboard</Button>
+              </div>
+              <div className="card-elevated rounded-lg">
+                <div className="px-4 py-3 border-b border-border"><h2 className="text-sm font-bold">Recent Payouts</h2></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead><tr className="border-b border-border">
+                      {['Payout Date', 'Arrival', 'Amount', 'Transactions', 'Status'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                    </tr></thead>
+                    <tbody>{REPORT_PAYOUTS.map(po => (
+                      <tr key={po.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer">
+                        <td className="px-4 py-2.5 text-sm font-medium">{po.date}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{po.arrival}</td>
+                        <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${po.amount.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-sm tabular-nums font-medium">{po.txCount}</td>
+                        <td className="px-4 py-2.5"><StatusBadge status={po.status} /></td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </>)}
       </div>
-      {/* Transaction Detail Panel — inline */}
+
+      {/* ===== TRANSACTION DETAIL PANEL ===== */}
       {selectedTx && (
-        <div className="w-[340px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
-            <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
-              <h3 className="text-sm font-bold">Transaction Details</h3>
-              <button onClick={() => setSelectedTx(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+        <div className="w-full md:w-[340px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+          <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
+            <h3 className="text-sm font-bold">Transaction Details</h3>
+            <button onClick={() => setSelectedTx(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="space-y-1">
+              <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Customer</div>
+              <div className="text-sm font-bold">{selectedTx.customer}</div>
             </div>
-            <div className="p-5 space-y-4">
-              <div className="space-y-1">
-                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Customer</div>
-                <div className="text-sm font-bold">{selectedTx.customer}</div>
-              </div>
-              <div className="h-px bg-border" />
-              <div className="grid grid-cols-2 gap-3">
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Type</div><StatusBadge status={selectedTx.type} className="mt-1" /></div>
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Status</div><StatusBadge status={selectedTx.status} className="mt-1" /></div>
-              </div>
-              <div className="h-px bg-border" />
-              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Description</div><div className="text-sm font-medium mt-1">{selectedTx.description}</div></div>
-              <div className="h-px bg-border" />
-              <div className="card-elevated rounded-lg p-3 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Amount</span><span className="font-bold">${Math.abs(selectedTx.amount).toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Fee</span><span className="font-medium">-${selectedTx.fee.toFixed(2)}</span></div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between text-sm"><span className="font-bold">Net</span><span className="font-bold">${selectedTx.net.toFixed(2)}</span></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Method</div><div className="text-sm font-medium mt-1">{selectedTx.method}</div></div>
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Date</div><div className="text-sm font-medium mt-1">{selectedTx.date}</div></div>
-              </div>
-              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Transaction ID</div><div className="text-xs font-medium text-muted-foreground mt-1 font-mono">{selectedTx.id}</div></div>
+            <div className="h-px bg-border" />
+            <div className="grid grid-cols-2 gap-3">
+              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Type</div><StatusBadge status={selectedTx.type} className="mt-1" /></div>
+              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Status</div><StatusBadge status={selectedTx.status} className="mt-1" /></div>
             </div>
-            <div className="p-5 border-t border-border space-y-2">
-              <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern"><Receipt className="w-3.5 h-3.5 mr-1.5" />View Receipt</Button>
-              {selectedTx.status === 'succeeded' && <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern text-red-600"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refund</Button>}
+            <div className="h-px bg-border" />
+            <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Description</div><div className="text-sm font-medium mt-1">{selectedTx.description}</div></div>
+            <div className="h-px bg-border" />
+            <div className="card-elevated rounded-lg p-3 space-y-2">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Amount</span><span className="font-bold">${Math.abs(selectedTx.amount).toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Tax (HST 13%)</span><span className="font-medium">${Math.abs(selectedTx.tax).toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Processing Fee</span><span className="font-medium">-${selectedTx.fee.toFixed(2)}</span></div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between text-sm"><span className="font-bold">Net</span><span className="font-bold">${selectedTx.net.toFixed(2)}</span></div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Method</div><div className="text-sm font-medium mt-1">{selectedTx.method}</div></div>
+              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Date</div><div className="text-sm font-medium mt-1">{selectedTx.date}</div></div>
+            </div>
+            <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Transaction ID</div><div className="text-xs font-medium text-muted-foreground mt-1 font-mono">{selectedTx.id}</div></div>
+            {selectedTx.stripeId && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Stripe ID</div><div className="text-xs font-medium text-muted-foreground mt-1 font-mono">{selectedTx.stripeId}</div></div>}
+          </div>
+          <div className="p-4 border-t border-border space-y-2 shrink-0">
+            <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern"><Receipt className="w-3.5 h-3.5 mr-1.5" />View Receipt</Button>
+            {selectedTx.status === 'succeeded' && <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern text-red-600"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refund</Button>}
+            {selectedTx.status === 'failed' && <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Retry Payment</Button>}
+          </div>
+        </div>
+      )}
+
+      {/* ===== INVOICE DETAIL PANEL ===== */}
+      {selectedInv && !selectedTx && (
+        <div className="w-full md:w-[380px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+          <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
+            <h3 className="text-sm font-bold">{selectedInv.number}</h3>
+            <button onClick={() => setSelectedInv(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-bold">{selectedInv.customer}</div>
+                <div className="text-xs text-muted-foreground font-medium">{selectedInv.email}</div>
+              </div>
+              <StatusBadge status={selectedInv.status} />
+            </div>
+            <div className="h-px bg-border" />
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">Issued</span><span className="font-medium">{selectedInv.dateIssued}</span></div>
+              <div><span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">Due</span><span className={`font-medium ${selectedInv.status === 'overdue' ? 'text-red-500' : ''}`}>{selectedInv.dueDate || '—'}</span></div>
+            </div>
+            <div className="h-px bg-border" />
+            {/* Line items */}
+            <div>
+              <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Line Items</div>
+              <div className="space-y-1.5">
+                {selectedInv.lineItems.map((li, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium flex-1 mr-3">{li.desc}</span>
+                    <span className="font-medium tabular-nums shrink-0">${li.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="h-px bg-border" />
+            {/* Totals */}
+            <div className="card-elevated rounded-lg p-3 space-y-2">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Subtotal</span><span className="font-medium tabular-nums">${selectedInv.subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Tax (HST 13%)</span><span className="font-medium tabular-nums">${selectedInv.tax.toFixed(2)}</span></div>
+              <div className="h-px bg-border" />
+              <div className="flex justify-between text-sm"><span className="font-bold">Total</span><span className="font-bold tabular-nums">${(selectedInv.subtotal + selectedInv.tax).toFixed(2)}</span></div>
+              {selectedInv.paid > 0 && <div className="flex justify-between text-sm"><span className="text-green-600 font-medium">Paid</span><span className="text-green-600 font-medium tabular-nums">-${selectedInv.paid.toFixed(2)}</span></div>}
+              {selectedInv.outstanding > 0 && <div className="flex justify-between text-sm"><span className="font-bold">Balance Due</span><span className={`font-bold tabular-nums ${selectedInv.status === 'overdue' ? 'text-red-500' : ''}`}>${selectedInv.outstanding.toFixed(2)}</span></div>}
+            </div>
+            {/* Payment info */}
+            {selectedInv.paymentMethod && (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">Payment Method</span><span className="font-medium">{selectedInv.paymentMethod}</span></div>
+                <div><span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">Paid Date</span><span className="font-medium">{selectedInv.paidDate}</span></div>
+              </div>
+            )}
+            {/* Notes */}
+            {selectedInv.notes && (
+              <div>
+                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Notes</div>
+                <div className="text-sm text-muted-foreground font-medium">{selectedInv.notes}</div>
+              </div>
+            )}
+          </div>
+          <div className="p-4 border-t border-border space-y-2 shrink-0">
+            {(selectedInv.status === 'draft' || selectedInv.status === 'sent' || selectedInv.status === 'partial' || selectedInv.status === 'overdue') && (
+              <Button className="w-full h-9 text-xs font-bold btn-primary-modern"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Record Payment</Button>
+            )}
+            {selectedInv.status === 'draft' && (
+              <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern"><Send className="w-3.5 h-3.5 mr-1.5" />Send Invoice</Button>
+            )}
+            {(selectedInv.status === 'sent' || selectedInv.status === 'partial' || selectedInv.status === 'overdue') && (
+              <Button variant="outline" className="w-full h-9 text-xs font-bold btn-outline-modern"><Send className="w-3.5 h-3.5 mr-1.5" />Resend</Button>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 h-9 text-xs font-bold btn-outline-modern"><Download className="w-3.5 h-3.5 mr-1.5" />PDF</Button>
+              {selectedInv.status === 'draft' && <Button variant="outline" className="flex-1 h-9 text-xs font-bold btn-outline-modern"><Pencil className="w-3.5 h-3.5 mr-1.5" />Edit</Button>}
+              {selectedInv.status !== 'paid' && <Button variant="outline" className="flex-1 h-9 text-xs font-bold btn-outline-modern text-red-600"><Ban className="w-3.5 h-3.5 mr-1.5" />Void</Button>}
+            </div>
+          </div>
         </div>
       )}
       </div>
+
+      {/* ===== CREATE INVOICE WIZARD MODAL ===== */}
+      {showCreateInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={resetWizard} />
+          <div className="relative bg-card rounded-xl shadow-xl border w-full max-w-lg mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 fade-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-lg font-bold">Create Invoice</h3>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Step {wizardStep} of 4</p>
+              </div>
+              <button onClick={resetWizard} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted"><X className="h-4 w-4" /></button>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1 bg-muted shrink-0"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${wizardStep * 25}%` }} /></div>
+
+            {/* Step content */}
+            <div className="flex-1 overflow-y-auto p-3 md:p-6">
+              {/* Step 1: Select Customer */}
+              {wizardStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Search Customer</label>
+                    <input value={wizardCustomerSearch} onChange={e => setWizardCustomerSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40" autoFocus />
+                  </div>
+                  <div className="space-y-1">
+                    {INVOICE_CUSTOMERS.filter(c => !wizardCustomerSearch || c.name.toLowerCase().includes(wizardCustomerSearch.toLowerCase()) || c.email.toLowerCase().includes(wizardCustomerSearch.toLowerCase())).map(c => (
+                      <button key={c.id} onClick={() => setWizardCustomer(c)} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${wizardCustomer?.id === c.id ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted/50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-bold">{c.name}</div>
+                            <div className="text-xs text-muted-foreground font-medium">{c.email}</div>
+                          </div>
+                          {c.unpaidBookings > 0 && <div className="text-right"><div className="text-xs font-bold tabular-nums">${c.unpaidTotal.toLocaleString()}</div><div className="text-[10px] text-muted-foreground font-medium">{c.unpaidBookings} unpaid bookings</div></div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Select Bookings */}
+              {wizardStep === 2 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Select Bookings</label>
+                    <button className="text-xs font-semibold text-primary hover:underline" onClick={() => setWizardBookings(prev => prev.map(b => ({ ...b, selected: !prev.every(x => x.selected) })))}>
+                      {wizardBookings.every(b => b.selected) ? 'Deselect All' : 'Select All'}
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {wizardBookings.map(bk => (
+                      <button key={bk.id} onClick={() => setWizardBookings(prev => prev.map(b => b.id === bk.id ? { ...b, selected: !b.selected } : b))} className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${bk.selected ? 'bg-primary/5' : 'hover:bg-muted/30'}`}>
+                        <Checkbox checked={bk.selected} className="shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{bk.court} — {bk.sport} ({bk.duration})</div>
+                          <div className="text-xs text-muted-foreground font-medium">{bk.date}</div>
+                        </div>
+                        <span className="text-sm font-bold tabular-nums shrink-0">${bk.amount.toFixed(2)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="card-elevated rounded-lg p-3 flex justify-between items-center">
+                    <span className="text-sm font-medium text-muted-foreground">{wizardSelectedBookings.length} of {wizardBookings.length} selected</span>
+                    <span className="text-sm font-bold tabular-nums">${wizardSubtotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Review */}
+              {wizardStep === 3 && (
+                <div className="space-y-4">
+                  <div className="card-elevated rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Customer</span><span className="font-bold">{wizardCustomer?.name}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Email</span><span className="font-medium">{wizardCustomer?.email}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Line Items</span><span className="font-medium">{wizardSelectedBookings.length} bookings</span></div>
+                  </div>
+                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Line Items</div>
+                  <div className="space-y-1.5">
+                    {wizardSelectedBookings.map(bk => (
+                      <div key={bk.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground font-medium">{bk.date} — {bk.court} ({bk.duration})</span>
+                        <span className="font-medium tabular-nums">${bk.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Subtotal</span><span className="font-medium tabular-nums">${wizardSubtotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Tax (HST 13%)</span><span className="font-medium tabular-nums">${wizardTax.toFixed(2)}</span></div>
+                    <div className="h-px bg-border" />
+                    <div className="flex justify-between text-sm"><span className="font-bold">Total</span><span className="font-bold tabular-nums">${wizardTotal.toFixed(2)}</span></div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Notes (optional)</label>
+                    <textarea value={wizardNotes} onChange={e => setWizardNotes(e.target.value)} rows={3} placeholder="Add internal notes or message for customer..." className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Confirmation */}
+              {wizardStep === 4 && (
+                <div className="text-center py-6 space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto"><CheckCircle2 className="w-7 h-7 text-green-600" /></div>
+                  <div>
+                    <h3 className="text-lg font-bold">Invoice Created</h3>
+                    <p className="text-sm text-muted-foreground font-medium mt-1">INV-2026-001242 has been created for {wizardCustomer?.name}</p>
+                  </div>
+                  <div className="card-elevated rounded-lg p-4 text-left space-y-2 max-w-xs mx-auto">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Amount</span><span className="font-bold tabular-nums">${wizardTotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Status</span><StatusBadge status="draft" /></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Due Date</span><span className="font-medium">Apr 21, 2026</span></div>
+                  </div>
+                  <div className="flex gap-2 justify-center pt-2">
+                    <Button className="h-9 text-xs font-bold btn-primary-modern"><Send className="w-3.5 h-3.5 mr-1.5" />Send Now</Button>
+                    <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={resetWizard}>Close</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer navigation */}
+            {wizardStep < 4 && (
+              <div className="px-6 py-4 border-t flex justify-between shrink-0">
+                <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => wizardStep === 1 ? resetWizard() : setWizardStep(s => s - 1)}>
+                  {wizardStep === 1 ? 'Cancel' : 'Back'}
+                </Button>
+                <Button className="h-9 text-xs font-bold btn-primary-modern px-6" disabled={wizardStep === 1 && !wizardCustomer || wizardStep === 2 && wizardSelectedBookings.length === 0} onClick={() => setWizardStep(s => s + 1)}>
+                  {wizardStep === 3 ? 'Create Invoice' : 'Next'}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -3260,18 +4001,18 @@ function BillingView() {
 // PROGRAMS VIEW
 // ============================================================
 const MOCK_PROGRAMS = [
-  { id: 'P001', name: 'PB Beginner Clinic', type: 'clinic', sport: 'Pickleball', instructor: 'Coach Sarah', schedule: 'Tuesdays 6–7 PM', court: 'Court 1', capacity: 16, enrolled: 12, waitlist: 2, status: 'open' as const, price: 180, memberPrice: 150, description: 'Learn pickleball fundamentals in a fun, supportive group environment.', startDate: 'Mar 4, 2026', endDate: 'Apr 22, 2026' },
-  { id: 'P002', name: 'Junior Tennis Camp', type: 'camp', sport: 'Tennis', instructor: 'Coach Mike', schedule: 'Mon–Fri 9 AM–3 PM', court: 'Court 4, Court 5', capacity: 20, enrolled: 20, waitlist: 5, status: 'full' as const, price: 450, description: 'Week-long intensive tennis camp for juniors aged 8–14.', startDate: 'Mar 17, 2026', endDate: 'Mar 21, 2026' },
-  { id: 'P003', name: 'Advanced PB Drills', type: 'clinic', sport: 'Pickleball', instructor: 'Coach Sarah', schedule: 'Thursdays 7–8:30 PM', court: 'Court 2', capacity: 12, enrolled: 8, waitlist: 0, status: 'open' as const, price: 220, memberPrice: 190, description: 'Drills and strategy for 3.5+ rated players.', startDate: 'Mar 6, 2026', endDate: 'Apr 24, 2026' },
-  { id: 'P004', name: 'Basketball Open Gym', type: 'drop-in', sport: 'Basketball', instructor: 'Staff', schedule: 'Sat & Sun 8–11 AM', court: 'Court 6', capacity: 30, enrolled: 18, waitlist: 0, status: 'in_progress' as const, price: 15, description: 'Drop-in basketball sessions. Pay per visit.', startDate: 'Jan 4, 2026', endDate: 'Jun 28, 2026' },
-  { id: 'P005', name: 'Private Tennis Lessons', type: 'private', sport: 'Tennis', instructor: 'Coach Mike', schedule: 'By appointment', court: 'Court 5', capacity: 1, enrolled: 0, waitlist: 0, status: 'open' as const, price: 85, description: 'One-on-one tennis instruction for all levels.', startDate: '', endDate: '' },
-  { id: 'P006', name: 'VB Skills Workshop', type: 'clinic', sport: 'Volleyball', instructor: 'Coach Jess', schedule: 'Wednesdays 5–6:30 PM', court: 'Court 6', capacity: 14, enrolled: 6, waitlist: 0, status: 'draft' as const, price: 160, description: 'Volleyball fundamentals — serving, passing, and setting.', startDate: 'Apr 2, 2026', endDate: 'May 21, 2026' },
+  { id: 'P001', name: 'PB Beginner Clinic', type: 'clinic', sport: 'Pickleball', instructor: 'Coach Sarah', schedule: 'Tuesdays 6–7 PM', court: 'Court 1', capacity: 16, enrolled: 12, waitlist: 2, status: 'open' as const, price: 180, memberPrice: 150, description: 'Learn pickleball fundamentals in a fun, supportive group environment.', startDate: 'Mar 4, 2026', endDate: 'Apr 22, 2026', season: 'Spring 2026', ageGroup: '', totalRevenue: 2160, instructorCost: 640, courtCost: 480 },
+  { id: 'P002', name: 'Junior Tennis Camp', type: 'camp', sport: 'Tennis', instructor: 'Coach Mike', schedule: 'Mon–Fri 9 AM–3 PM', court: 'Court 4, Court 5', capacity: 20, enrolled: 20, waitlist: 5, status: 'full' as const, price: 450, description: 'Week-long intensive tennis camp for juniors aged 8–14.', startDate: 'Mar 17, 2026', endDate: 'Mar 21, 2026', season: 'Spring 2026', ageGroup: 'Ages 8-14', totalRevenue: 9000, instructorCost: 2400, courtCost: 1200 },
+  { id: 'P003', name: 'Advanced PB Drills', type: 'clinic', sport: 'Pickleball', instructor: 'Coach Sarah', schedule: 'Thursdays 7–8:30 PM', court: 'Court 2', capacity: 12, enrolled: 8, waitlist: 0, status: 'open' as const, price: 220, memberPrice: 190, description: 'Drills and strategy for 3.5+ rated players.', startDate: 'Mar 6, 2026', endDate: 'Apr 24, 2026', season: 'Spring 2026', ageGroup: 'Ages 16+', totalRevenue: 1760, instructorCost: 560, courtCost: 400 },
+  { id: 'P004', name: 'Basketball Open Gym', type: 'drop-in', sport: 'Basketball', instructor: 'Staff', schedule: 'Sat & Sun 8–11 AM', court: 'Court 6', capacity: 30, enrolled: 18, waitlist: 0, status: 'in_progress' as const, price: 15, description: 'Drop-in basketball sessions. Pay per visit.', startDate: 'Jan 4, 2026', endDate: 'Jun 28, 2026', season: 'Spring 2026', ageGroup: '', totalRevenue: 1440, instructorCost: 480, courtCost: 320 },
+  { id: 'P005', name: 'Private Tennis Lessons', type: 'private', sport: 'Tennis', instructor: 'Coach Mike', schedule: 'By appointment', court: 'Court 5', capacity: 1, enrolled: 0, waitlist: 0, status: 'open' as const, price: 85, description: 'One-on-one tennis instruction for all levels.', startDate: '', endDate: '', season: 'Spring 2026', ageGroup: '', totalRevenue: 0, instructorCost: 0, courtCost: 0 },
+  { id: 'P006', name: 'VB Skills Workshop', type: 'clinic', sport: 'Volleyball', instructor: 'Coach Jess', schedule: 'Wednesdays 5–6:30 PM', court: 'Court 6', capacity: 14, enrolled: 6, waitlist: 0, status: 'draft' as const, price: 160, description: 'Volleyball fundamentals — serving, passing, and setting.', startDate: 'Apr 2, 2026', endDate: 'May 21, 2026', season: 'Spring 2026', ageGroup: 'Ages 12-18', totalRevenue: 960, instructorCost: 360, courtCost: 240 },
 ];
 const MOCK_INSTRUCTORS = [
-  { id: 'I001', name: 'Coach Sarah', sports: ['Pickleball'], mode: 'facility' as const, activePrograms: 2, rating: 4.8, reviewCount: 34, status: 'active' as const },
-  { id: 'I002', name: 'Coach Mike', sports: ['Tennis'], mode: 'facility' as const, activePrograms: 2, rating: 4.9, reviewCount: 52, status: 'active' as const },
-  { id: 'I003', name: 'Coach Jess', sports: ['Volleyball', 'Basketball'], mode: 'independent' as const, activePrograms: 1, rating: 4.6, reviewCount: 18, status: 'active' as const },
-  { id: 'I004', name: 'Coach Daniel', sports: ['Tennis', 'Pickleball'], mode: 'independent' as const, activePrograms: 0, rating: 4.3, reviewCount: 8, status: 'inactive' as const },
+  { id: 'I001', name: 'Coach Sarah', sports: ['Pickleball'], mode: 'facility' as const, activePrograms: 2, rating: 4.8, reviewCount: 34, status: 'active' as const, bio: 'IPTPA certified pickleball instructor with 5 years of coaching experience. Specializes in beginner and intermediate development.', certifications: ['IPTPA Level II', 'CPR/First Aid'], hourlyRate: 45, compensationType: 'flat_rate' as const, programs: ['PB Beginner Clinic', 'Advanced PB Drills'], totalEarned: 3200, totalPaid: 2800, outstanding: 400 },
+  { id: 'I002', name: 'Coach Mike', sports: ['Tennis'], mode: 'facility' as const, activePrograms: 2, rating: 4.9, reviewCount: 52, status: 'active' as const, bio: 'Former D1 tennis player and USPTA certified professional. 10+ years coaching juniors and adults at all levels.', certifications: ['USPTA Professional', 'USTA High Performance', 'CPR/First Aid'], hourlyRate: 65, compensationType: 'revenue_split' as const, programs: ['Junior Tennis Camp', 'Private Tennis Lessons'], totalEarned: 5400, totalPaid: 4800, outstanding: 600 },
+  { id: 'I003', name: 'Coach Jess', sports: ['Volleyball', 'Basketball'], mode: 'independent' as const, activePrograms: 1, rating: 4.6, reviewCount: 18, status: 'active' as const, bio: 'Multi-sport coach with background in collegiate volleyball. Passionate about youth development and team building.', certifications: ['USAV CAP Level I', 'CPR/First Aid'], hourlyRate: 40, compensationType: 'flat_rate' as const, programs: ['VB Skills Workshop'], totalEarned: 1200, totalPaid: 1200, outstanding: 0 },
+  { id: 'I004', name: 'Coach Daniel', sports: ['Tennis', 'Pickleball'], mode: 'independent' as const, activePrograms: 0, rating: 4.3, reviewCount: 8, status: 'inactive' as const, bio: 'Versatile racket sports instructor. Available for private lessons and group clinics.', certifications: ['PTR Certified', 'IPTPA Level I'], hourlyRate: 50, compensationType: 'revenue_split' as const, programs: [], totalEarned: 800, totalPaid: 800, outstanding: 0 },
 ];
 
 function ProgramsView() {
@@ -3279,22 +4020,45 @@ function ProgramsView() {
   const [selectedProgram, setSelectedProgram] = useState<typeof MOCK_PROGRAMS[0] | null>(null);
   const [programTab, setProgramTab] = useState('Overview');
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('All Types');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [selectedInstructor, setSelectedInstructor] = useState<typeof MOCK_INSTRUCTORS[0] | null>(null);
+  const [instructorTab, setInstructorTab] = useState('Overview');
+
+  const typeOptions = ['All Types', 'private', 'clinic', 'class', 'camp', 'drop-in'];
+  const statusOptions = ['All Status', 'open', 'full', 'in_progress', 'draft', 'completed'];
+
+  const filteredPrograms = MOCK_PROGRAMS.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.instructor.toLowerCase().includes(search.toLowerCase())) return false;
+    if (typeFilter !== 'All Types' && p.type !== typeFilter) return false;
+    if (statusFilter !== 'All Status' && p.status !== statusFilter) return false;
+    return true;
+  });
+
+  const cycleTypeFilter = () => {
+    const idx = typeOptions.indexOf(typeFilter);
+    setTypeFilter(typeOptions[(idx + 1) % typeOptions.length]);
+  };
+  const cycleStatusFilter = () => {
+    const idx = statusOptions.indexOf(statusFilter);
+    setStatusFilter(statusOptions[(idx + 1) % statusOptions.length]);
+  };
+
   return (
     <>
       <SPageHeader title="Programs"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create Program</Button></SPageHeader>
-      <STabBar tabs={['My Programs', 'Instructors']} active={tab} onChange={setTab} />
+      <STabBar tabs={['My Programs', 'Instructors']} active={tab} onChange={(t) => { setTab(t); setSelectedProgram(null); setSelectedInstructor(null); }} />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         {tab === 'My Programs' && (
           <div className="p-6 space-y-4">
             <SToolbar>
               <SSearchInput placeholder="Search programs..." value={search} onChange={setSearch} />
-              <SFilterPill label="All Types" active={true} onClick={() => {}} />
-              <SFilterPill label="All Sports" active={false} onClick={() => {}} />
-              <SFilterPill label="All Status" active={false} onClick={() => {}} />
+              <SFilterPill label={typeFilter === 'All Types' ? 'All Types' : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)} active={typeFilter !== 'All Types'} onClick={cycleTypeFilter} />
+              <SFilterPill label={statusFilter === 'All Status' ? 'All Status' : statusFilter.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} active={statusFilter !== 'All Status'} onClick={cycleStatusFilter} />
             </SToolbar>
-            <div className="grid grid-cols-3 gap-4">
-              {MOCK_PROGRAMS.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase())).map(prog => (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {filteredPrograms.map(prog => (
                 <div key={prog.id} className="card-elevated rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -3302,6 +4066,10 @@ function ProgramsView() {
                       <div className="flex items-center gap-2 mt-1">
                         <StatusBadge status={prog.type} />
                         <span className="text-xs text-muted-foreground font-medium">{prog.sport}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {prog.season && <span className="text-[10px] text-muted-foreground">{prog.season}</span>}
+                        {prog.ageGroup && <span className="text-[10px] text-muted-foreground">· {prog.ageGroup}</span>}
                       </div>
                     </div>
                     <StatusBadge status={prog.status} />
@@ -3317,8 +4085,8 @@ function ProgramsView() {
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setSelectedProgram(prog); setProgramTab('Overview'); }}>View</Button>
-                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern">Roster</Button>
-                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern">Attendance</Button>
+                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setSelectedProgram(prog); setProgramTab('Roster'); }}>Roster</Button>
+                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setSelectedProgram(prog); setProgramTab('Attendance'); }}>Attendance</Button>
                   </div>
                 </div>
               ))}
@@ -3326,7 +4094,7 @@ function ProgramsView() {
           </div>
         )}
         {tab === 'Instructors' && (
-          <div className="p-6 grid grid-cols-3 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             {MOCK_INSTRUCTORS.map(inst => (
               <div key={inst.id} className="card-elevated rounded-lg p-4 space-y-3">
                 <div className="flex items-start gap-3">
@@ -3344,21 +4112,21 @@ function ProgramsView() {
                   <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Rating</div><div className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400" /><span className="text-sm font-bold">{inst.rating}</span><span className="text-[10px] text-muted-foreground">({inst.reviewCount})</span></div></div>
                   <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Status</div><div className="text-sm font-bold capitalize">{inst.status}</div></div>
                 </div>
-                <Button variant="outline" className="w-full h-7 text-[10px] font-bold btn-outline-modern">View Profile</Button>
+                <Button variant="outline" className="w-full h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setSelectedInstructor(inst); setInstructorTab('Overview'); }}>View Profile</Button>
               </div>
             ))}
           </div>
         )}
       </div>
-      {/* Program Detail Panel — inline */}
+      {/* Program Detail Panel */}
       {selectedProgram && (
-        <div className="w-[520px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+        <div className="w-full md:w-[520px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
             <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
               <div className="flex items-center gap-2"><h3 className="text-sm font-bold">{selectedProgram.name}</h3><StatusBadge status={selectedProgram.status} /></div>
               <button onClick={() => setSelectedProgram(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex border-b border-border px-5">
-              {['Overview', 'Schedule', 'Roster'].map(t => (
+              {['Overview', 'Schedule', 'Roster', 'Attendance', 'Financials'].map(t => (
                 <button key={t} onClick={() => setProgramTab(t)} className={`px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px ${programTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{t}</button>
               ))}
             </div>
@@ -3372,6 +4140,8 @@ function ProgramsView() {
                     <div><span className="text-[11px] text-muted-foreground font-medium">Schedule:</span> <span className="text-sm font-medium">{selectedProgram.schedule}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Court:</span> <span className="text-sm font-medium">{selectedProgram.court}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Dates:</span> <span className="text-sm font-medium">{selectedProgram.startDate ? `${selectedProgram.startDate} – ${selectedProgram.endDate}` : 'Ongoing'}</span></div>
+                    {selectedProgram.season && <div><span className="text-[11px] text-muted-foreground font-medium">Season:</span> <span className="text-sm font-medium">{selectedProgram.season}</span></div>}
+                    {selectedProgram.ageGroup && <div><span className="text-[11px] text-muted-foreground font-medium">Age Group:</span> <span className="text-sm font-medium">{selectedProgram.ageGroup}</span></div>}
                   </div>
                 </div>
                 <div className="card-elevated rounded-lg p-4 space-y-2">
@@ -3385,6 +4155,23 @@ function ProgramsView() {
                   <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Capacity</div>
                   <div className="flex justify-between text-sm font-medium"><span>{selectedProgram.enrolled} enrolled of {selectedProgram.capacity}</span>{selectedProgram.waitlist > 0 && <span className="text-orange-600">{selectedProgram.waitlist} on waitlist</span>}</div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${(selectedProgram.enrolled / selectedProgram.capacity) * 100}%` }} /></div>
+                </div>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Financial Summary</div>
+                  {(() => {
+                    const netProfit = selectedProgram.totalRevenue - selectedProgram.instructorCost - selectedProgram.courtCost;
+                    const margin = selectedProgram.totalRevenue > 0 ? Math.round((netProfit / selectedProgram.totalRevenue) * 100) : 0;
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-medium">Total Revenue</span><span className="text-sm font-bold text-green-600">${selectedProgram.totalRevenue.toLocaleString()}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-medium">Instructor Cost</span><span className="text-sm font-medium text-red-500">-${selectedProgram.instructorCost.toLocaleString()}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-medium">Court Cost</span><span className="text-sm font-medium text-red-500">-${selectedProgram.courtCost.toLocaleString()}</span></div>
+                        <Separator />
+                        <div className="flex justify-between items-center"><span className="text-xs font-bold">Net Profit</span><span className="text-sm font-bold">${netProfit.toLocaleString()}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-xs font-bold">Profit Margin</span><span className={`text-sm font-bold ${margin >= 30 ? 'text-green-600' : margin >= 15 ? 'text-amber-600' : 'text-red-500'}`}>{margin}%</span></div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>)}
               {programTab === 'Schedule' && (
@@ -3415,6 +4202,190 @@ function ProgramsView() {
                   </table>
                 </div>
               )}
+              {programTab === 'Attendance' && (
+                <div className="card-elevated rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead><tr className="border-b border-border">
+                      {['Date', 'Session', 'Present', 'Absent', 'Rate'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {[
+                        { date: 'Mar 4', session: 'Session 1', present: 11, absent: 1, rate: '92%' },
+                        { date: 'Mar 11', session: 'Session 2', present: 12, absent: 0, rate: '100%' },
+                        { date: 'Mar 18', session: 'Session 3', present: 10, absent: 2, rate: '83%' },
+                        { date: 'Mar 25', session: 'Session 4', present: 9, absent: 3, rate: '75%' },
+                      ].map((a, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="px-4 py-2.5 text-sm font-medium">{a.date}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{a.session}</td>
+                          <td className="px-4 py-2.5 text-sm font-medium text-green-600 tabular-nums">{a.present}</td>
+                          <td className="px-4 py-2.5 text-sm font-medium text-red-500 tabular-nums">{a.absent}</td>
+                          <td className="px-4 py-2.5"><span className={`text-sm font-bold tabular-nums ${parseInt(a.rate) >= 90 ? 'text-green-600' : parseInt(a.rate) >= 75 ? 'text-amber-600' : 'text-red-500'}`}>{a.rate}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {programTab === 'Financials' && (<>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Revenue Summary</div>
+                  {(() => {
+                    const netProfit = selectedProgram.totalRevenue - selectedProgram.instructorCost - selectedProgram.courtCost;
+                    const margin = selectedProgram.totalRevenue > 0 ? Math.round((netProfit / selectedProgram.totalRevenue) * 100) : 0;
+                    return (
+                      <div className="grid grid-cols-3 gap-3 pt-1">
+                        <div><div className="text-[11px] text-muted-foreground font-medium">Revenue</div><div className="text-lg font-bold text-green-600">${selectedProgram.totalRevenue.toLocaleString()}</div></div>
+                        <div><div className="text-[11px] text-muted-foreground font-medium">Net Profit</div><div className="text-lg font-bold">${netProfit.toLocaleString()}</div></div>
+                        <div><div className="text-[11px] text-muted-foreground font-medium">Margin</div><div className={`text-lg font-bold ${margin >= 30 ? 'text-green-600' : margin >= 15 ? 'text-amber-600' : 'text-red-500'}`}>{margin}%</div></div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="card-elevated rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-border">
+                    <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Enrollment Revenue</div>
+                  </div>
+                  <table className="w-full">
+                    <thead><tr className="border-b border-border">
+                      {['Student', 'Status', 'Amount', 'Method', 'Date'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {[
+                        { student: 'Jane Doe', status: 'paid', amount: selectedProgram.price, method: 'Credit Card', date: 'Feb 28' },
+                        { student: 'Alex Martin', status: 'paid', amount: selectedProgram.memberPrice || selectedProgram.price, method: 'ACH', date: 'Mar 1' },
+                        { student: 'Emma Singh', status: 'paid', amount: selectedProgram.price, method: 'Credit Card', date: 'Mar 2' },
+                        { student: 'Rachel Gomez', status: 'pending', amount: selectedProgram.price, method: '\u2014', date: '\u2014' },
+                        { student: 'Kevin Nguyen', status: 'paid', amount: selectedProgram.memberPrice || selectedProgram.price, method: 'Credit Card', date: 'Mar 3' },
+                      ].slice(0, Math.min(5, selectedProgram.enrolled)).map((r, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="px-4 py-2.5 text-sm font-medium">{r.student}</td>
+                          <td className="px-4 py-2.5"><StatusBadge status={r.status} /></td>
+                          <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${r.amount}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{r.method}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{r.date}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/30">
+                        <td className="px-4 py-2.5 text-sm font-bold">Total ({selectedProgram.enrolled} students)</td>
+                        <td className="px-4 py-2.5"></td>
+                        <td className="px-4 py-2.5 text-sm font-bold tabular-nums">${selectedProgram.totalRevenue.toLocaleString()}</td>
+                        <td className="px-4 py-2.5"></td>
+                        <td className="px-4 py-2.5"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
+            </div>
+        </div>
+      )}
+      {/* Instructor Detail Panel */}
+      {selectedInstructor && (
+        <div className="w-full md:w-[520px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+            <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
+              <div className="flex items-center gap-2"><h3 className="text-sm font-bold">{selectedInstructor.name}</h3><StatusBadge status={selectedInstructor.status} /></div>
+              <button onClick={() => setSelectedInstructor(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex border-b border-border px-5">
+              {['Overview', 'Programs', 'Compensation'].map(t => (
+                <button key={t} onClick={() => setInstructorTab(t)} className={`px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px ${instructorTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{t}</button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {instructorTab === 'Overview' && (<>
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">{selectedInstructor.name.split(' ').map(w => w[0]).join('')}</AvatarFallback></Avatar>
+                  <div className="flex-1 space-y-1">
+                    <h3 className="text-base font-bold">{selectedInstructor.name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      {selectedInstructor.sports.map(s => <StatusBadge key={s} status={s.toLowerCase()} />)}
+                      <StatusBadge status={selectedInstructor.mode} />
+                    </div>
+                    <div className="flex items-center gap-1 mt-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400" /><span className="text-sm font-bold">{selectedInstructor.rating}</span><span className="text-[10px] text-muted-foreground">({selectedInstructor.reviewCount} reviews)</span></div>
+                  </div>
+                </div>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Bio</div>
+                  <p className="text-sm font-medium text-muted-foreground">{selectedInstructor.bio}</p>
+                </div>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Details</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Sports:</span> <span className="text-sm font-medium">{selectedInstructor.sports.join(', ')}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Hourly Rate:</span> <span className="text-sm font-bold">${selectedInstructor.hourlyRate}/hr</span></div>
+                    <div className="col-span-2"><span className="text-[11px] text-muted-foreground font-medium">Certifications:</span> <span className="text-sm font-medium">{selectedInstructor.certifications.join(', ')}</span></div>
+                  </div>
+                </div>
+              </>)}
+              {instructorTab === 'Programs' && (
+                <div className="space-y-3">
+                  {selectedInstructor.programs.length === 0 ? (
+                    <div className="card-elevated rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground font-medium">No active programs</p></div>
+                  ) : (
+                    selectedInstructor.programs.map((pName, i) => {
+                      const prog = MOCK_PROGRAMS.find(p => p.name === pName);
+                      return (
+                        <div key={i} className="card-elevated rounded-lg p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-bold">{pName}</h4>
+                            {prog && <StatusBadge status={prog.status} />}
+                          </div>
+                          {prog && (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><Calendar className="w-3 h-3" />{prog.schedule}</div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><MapPin className="w-3 h-3" />{prog.court}</div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><Users className="w-3 h-3" />{prog.enrolled}/{prog.capacity} enrolled</div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+              {instructorTab === 'Compensation' && (<>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Compensation Model</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Type:</span> <span className="text-sm font-bold capitalize">{selectedInstructor.compensationType.replace('_', ' ')}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Rate:</span> <span className="text-sm font-bold">{selectedInstructor.compensationType === 'flat_rate' ? `$${selectedInstructor.hourlyRate}/hr` : '60/40 split'}</span></div>
+                  </div>
+                </div>
+                <div className="card-elevated rounded-lg p-4 space-y-3">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Earnings Summary</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-medium">Total Earned</span><span className="text-sm font-bold">${selectedInstructor.totalEarned.toLocaleString()}</span></div>
+                    <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-medium">Total Paid</span><span className="text-sm font-medium text-green-600">${selectedInstructor.totalPaid.toLocaleString()}</span></div>
+                    <Separator />
+                    <div className="flex justify-between items-center"><span className="text-xs font-bold">Outstanding</span><span className={`text-sm font-bold ${selectedInstructor.outstanding > 0 ? 'text-orange-600' : 'text-green-600'}`}>${selectedInstructor.outstanding.toLocaleString()}</span></div>
+                  </div>
+                </div>
+                <div className="card-elevated rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-border">
+                    <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Recent Payments</div>
+                  </div>
+                  <table className="w-full">
+                    <thead><tr className="border-b border-border">
+                      {['Date', 'Program', 'Amount', 'Status'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {[
+                        { date: 'Mar 15', program: selectedInstructor.programs[0] || '\u2014', amount: Math.round(selectedInstructor.totalPaid * 0.35), status: 'paid' },
+                        { date: 'Mar 1', program: selectedInstructor.programs[0] || '\u2014', amount: Math.round(selectedInstructor.totalPaid * 0.35), status: 'paid' },
+                        { date: 'Feb 15', program: selectedInstructor.programs[0] || '\u2014', amount: Math.round(selectedInstructor.totalPaid * 0.30), status: 'paid' },
+                      ].map((p, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="px-4 py-2.5 text-sm font-medium">{p.date}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{p.program}</td>
+                          <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${p.amount.toLocaleString()}</td>
+                          <td className="px-4 py-2.5"><StatusBadge status={p.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>)}
             </div>
         </div>
       )}
@@ -3427,11 +4398,30 @@ function ProgramsView() {
 // LEAGUES & EVENTS VIEW
 // ============================================================
 const MOCK_LEAGUES = [
-  { id: 'L001', name: 'Spring Pickleball League', category: 'league' as const, format: 'Round Robin', sport: 'Pickleball', playType: 'Doubles', status: 'in_progress' as const, startDate: 'Mar 3, 2026', endDate: 'May 23, 2026', registered: 24, capacity: 32, fee: 120 },
-  { id: 'L002', name: 'Tennis Singles Ladder', category: 'league' as const, format: 'Ladder', sport: 'Tennis', playType: 'Singles', status: 'registration_open' as const, startDate: 'Apr 1, 2026', endDate: 'Jun 30, 2026', registered: 18, capacity: 24, fee: 80 },
-  { id: 'L003', name: 'March Madness Tournament', category: 'tournament' as const, format: 'Single Elimination', sport: 'Basketball', playType: 'Teams (5v5)', status: 'completed' as const, startDate: 'Mar 15, 2026', endDate: 'Mar 22, 2026', registered: 8, capacity: 8, fee: 200 },
-  { id: 'L004', name: 'Corporate Volleyball Social', category: 'event' as const, format: 'Social Mixer', sport: 'Volleyball', playType: 'Mixed', status: 'registration_open' as const, startDate: 'Apr 12, 2026', endDate: 'Apr 12, 2026', registered: 22, capacity: 40, fee: 25 },
-  { id: 'L005', name: 'PB King of Court', category: 'tournament' as const, format: 'King of Court', sport: 'Pickleball', playType: 'Singles', status: 'draft' as const, startDate: 'May 3, 2026', endDate: 'May 3, 2026', registered: 0, capacity: 16, fee: 30 },
+  { id: 'L001', name: 'Spring Pickleball League', category: 'league' as const, format: 'Round Robin', sport: 'Pickleball', playType: 'Doubles', status: 'in_progress' as const, startDate: 'Mar 3, 2026', endDate: 'May 23, 2026', registered: 24, capacity: 32, fee: 120, description: 'Our flagship spring doubles league for intermediate to advanced pickleball players. Weekly matches every Tuesday evening.', season: 'Spring 2026', divisions: ['Competitive', 'Recreational'], matchFormat: 'Best of 3 sets, rally scoring to 11', scoringSystem: '3 pts win, 1 pt draw, 0 pts loss', director: 'Coach Mike', standingsVisibility: 'Public' as const },
+  { id: 'L002', name: 'Tennis Singles Ladder', category: 'league' as const, format: 'Ladder', sport: 'Tennis', playType: 'Singles', status: 'registration_open' as const, startDate: 'Apr 1, 2026', endDate: 'Jun 30, 2026', registered: 18, capacity: 24, fee: 80, description: 'Challenge-based ladder for competitive singles players. Challenge anyone within 3 positions above you.', season: 'Spring/Summer 2026', divisions: [], matchFormat: 'Best of 3 sets, standard scoring', scoringSystem: 'Ladder position swap on win', director: 'Sarah Mitchell', standingsVisibility: 'Public' as const },
+  { id: 'L003', name: 'March Madness Tournament', category: 'tournament' as const, format: 'Single Elimination', sport: 'Basketball', playType: 'Teams (5v5)', status: 'completed' as const, startDate: 'Mar 15, 2026', endDate: 'Mar 22, 2026', registered: 8, capacity: 8, fee: 200, description: 'Annual single-elimination basketball tournament. 8 teams battle for the spring championship trophy.', season: 'Spring 2026', divisions: [], matchFormat: '4 quarters, 10 min each', scoringSystem: 'Single elimination', director: 'Coach Mike', standingsVisibility: 'Public' as const },
+  { id: 'L004', name: 'Corporate Volleyball Social', category: 'event' as const, format: 'Social Mixer', sport: 'Volleyball', playType: 'Mixed', status: 'registration_open' as const, startDate: 'Apr 12, 2026', endDate: 'Apr 12, 2026', registered: 22, capacity: 40, fee: 25, description: 'Fun social event for corporate teams. No experience required, rotating teams, prizes for everyone!', season: 'Spring 2026', divisions: [], matchFormat: 'Rotating 15-min sets', scoringSystem: 'Fun scoring — no standings', director: 'Sarah Mitchell', standingsVisibility: 'Participants only' as const },
+  { id: 'L005', name: 'PB King of Court', category: 'tournament' as const, format: 'King of Court', sport: 'Pickleball', playType: 'Singles', status: 'draft' as const, startDate: 'May 3, 2026', endDate: 'May 3, 2026', registered: 0, capacity: 16, fee: 30, description: 'Fast-paced king of the court format. Win and stay on, lose and rotate. Last player standing wins!', season: 'Spring 2026', divisions: ['Open', 'Beginner'], matchFormat: 'Games to 7, win by 1', scoringSystem: 'Points accumulated across rounds', director: 'Coach Mike', standingsVisibility: 'Public' as const },
+];
+const MOCK_LEAGUE_SCHEDULE = [
+  { date: 'Mar 3', time: '7 PM', court: 'Ct 1', match: 'Dink Masters vs Lobbers', score: '11-3, 11-5', status: 'completed' as const, round: 1 },
+  { date: 'Mar 3', time: '7 PM', court: 'Ct 2', match: 'Net Ninjas vs Drop Shot', score: '11-7, 11-4', status: 'completed' as const, round: 1 },
+  { date: 'Mar 3', time: '8 PM', court: 'Ct 1', match: 'Kitchen Crew vs Baseline', score: '11-8, 9-11, 11-6', status: 'completed' as const, round: 1 },
+  { date: 'Mar 10', time: '7 PM', court: 'Ct 1', match: 'Paddle Pushers vs Vipers', score: '11-9, 11-7', status: 'completed' as const, round: 2 },
+  { date: 'Mar 17', time: '7 PM', court: 'Ct 1', match: 'Dink Masters vs Net Ninjas', score: '—', status: 'scheduled' as const, round: 3 },
+  { date: 'Mar 17', time: '8 PM', court: 'Ct 2', match: 'Kitchen Crew vs Lobbers', score: '—', status: 'scheduled' as const, round: 3 },
+  { date: 'Mar 24', time: '7 PM', court: 'Ct 1', match: 'Drop Shot vs Vipers', score: '—', status: 'cancelled' as const, round: 4 },
+];
+const MOCK_REGISTRATIONS = [
+  { name: 'Jane & Alex', regType: 'team' as const, regDate: 'Feb 10, 2026', division: 'Competitive', teamName: 'Dink Masters', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Tom & Sarah', regType: 'team' as const, regDate: 'Feb 11, 2026', division: 'Competitive', teamName: 'Net Ninjas', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Kevin & Priya', regType: 'team' as const, regDate: 'Feb 12, 2026', division: 'Recreational', teamName: 'Kitchen Crew', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Mike & Rachel', regType: 'team' as const, regDate: 'Feb 13, 2026', division: 'Competitive', teamName: 'Paddle Pushers', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Brandon & Maria', regType: 'team' as const, regDate: 'Feb 14, 2026', division: 'Recreational', teamName: 'Volley Vipers', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Chris & Emma', regType: 'free_agent' as const, regDate: 'Feb 18, 2026', division: 'Recreational', teamName: '—', status: 'active' as const, payment: 'paid' as const },
+  { name: 'Daniel & Anika', regType: 'individual' as const, regDate: 'Feb 20, 2026', division: 'Competitive', teamName: '—', status: 'active' as const, payment: 'pending' as const },
+  { name: 'Ryan & Lisa', regType: 'team' as const, regDate: 'Feb 22, 2026', division: 'Recreational', teamName: 'Drop Shot Gang', status: 'active' as const, payment: 'paid' as const },
 ];
 const MOCK_STANDINGS = [
   { rank: 1, name: 'Team Dink Masters', played: 6, w: 5, l: 1, d: 0, pts: 15, gd: '+18' },
@@ -3449,11 +4439,18 @@ function LeaguesView() {
   const [selectedLeague, setSelectedLeague] = useState<typeof MOCK_LEAGUES[0] | null>(null);
   const [leagueTab, setLeagueTab] = useState('Overview');
   const [search, setSearch] = useState('');
+  const [sportFilter, setSportFilter] = useState('All Sports');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const SPORT_OPTIONS = ['All Sports', 'Tennis', 'Pickleball', 'Basketball', 'Volleyball'];
+  const STATUS_OPTIONS = ['All Status', 'Open', 'In Progress', 'Completed', 'Draft'];
+  const STATUS_MAP: Record<string, string> = { 'Open': 'registration_open', 'In Progress': 'in_progress', 'Completed': 'completed', 'Draft': 'draft' };
   const filtered = MOCK_LEAGUES.filter(l => {
     if (search && !l.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (tab === 'Leagues') return l.category === 'league';
-    if (tab === 'Tournaments') return l.category === 'tournament';
-    if (tab === 'Events') return l.category === 'event';
+    if (tab === 'Leagues') { if (l.category !== 'league') return false; }
+    if (tab === 'Tournaments') { if (l.category !== 'tournament') return false; }
+    if (tab === 'Events') { if (l.category !== 'event') return false; }
+    if (sportFilter !== 'All Sports' && l.sport !== sportFilter) return false;
+    if (statusFilter !== 'All Status' && l.status !== STATUS_MAP[statusFilter]) return false;
     return true;
   });
   return (
@@ -3461,13 +4458,13 @@ function LeaguesView() {
       <SPageHeader title="Leagues & Events"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create League</Button></SPageHeader>
       <STabBar tabs={['All', 'Leagues', 'Tournaments', 'Events']} active={tab} onChange={setTab} />
       <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         <SToolbar>
           <SSearchInput placeholder="Search leagues & events..." value={search} onChange={setSearch} />
-          <SFilterPill label="All Sports" active={true} onClick={() => {}} />
-          <SFilterPill label="All Status" active={false} onClick={() => {}} />
+          <SFilterPill label={sportFilter} active={sportFilter !== 'All Sports'} onClick={() => { const i = SPORT_OPTIONS.indexOf(sportFilter); setSportFilter(SPORT_OPTIONS[(i + 1) % SPORT_OPTIONS.length]); }} />
+          <SFilterPill label={statusFilter} active={statusFilter !== 'All Status'} onClick={() => { const i = STATUS_OPTIONS.indexOf(statusFilter); setStatusFilter(STATUS_OPTIONS[(i + 1) % STATUS_OPTIONS.length]); }} />
         </SToolbar>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {filtered.map(le => (
             <div key={le.id} className="card-elevated rounded-lg p-4 space-y-3">
               <div className="flex items-start justify-between">
@@ -3479,6 +4476,7 @@ function LeaguesView() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><Calendar className="w-3 h-3" />{le.startDate} – {le.endDate}</div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><Users className="w-3 h-3" />{le.registered}/{le.capacity} registered</div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><DollarSign className="w-3 h-3" />${le.fee}/player</div>
+                {le.divisions.length > 0 && <div className="flex items-center gap-2 text-xs font-medium"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">{le.divisions.length} Division{le.divisions.length > 1 ? 's' : ''}</span></div>}
               </div>
               <Button variant="outline" className="w-full h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setSelectedLeague(le); setLeagueTab('Overview'); }}>View Details</Button>
             </div>
@@ -3487,18 +4485,22 @@ function LeaguesView() {
       </div>
       {/* League Detail Panel */}
       {selectedLeague && (
-        <div className="w-[520px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+        <div className="w-full md:w-[520px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
             <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
               <div className="flex items-center gap-2"><h3 className="text-sm font-bold">{selectedLeague.name}</h3><StatusBadge status={selectedLeague.category} /><StatusBadge status={selectedLeague.status} /></div>
               <button onClick={() => setSelectedLeague(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
-            <div className="flex border-b border-border px-5">
-              {['Overview', 'Standings', 'Schedule', 'Registrations'].map(t => (
-                <button key={t} onClick={() => setLeagueTab(t)} className={`px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px ${leagueTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{t}</button>
+            <div className="flex border-b border-border px-5 overflow-x-auto">
+              {['Overview', 'Standings', 'Schedule', 'Registrations', ...(selectedLeague.category === 'tournament' ? ['Bracket'] : [])].map(t => (
+                <button key={t} onClick={() => setLeagueTab(t)} className={`px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px whitespace-nowrap ${leagueTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{t}</button>
               ))}
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {leagueTab === 'Overview' && (<>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Description</div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedLeague.description}</p>
+                </div>
                 <div className="card-elevated rounded-lg p-4 space-y-2">
                   <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Details</div>
                   <div className="grid grid-cols-2 gap-2">
@@ -3506,6 +4508,17 @@ function LeaguesView() {
                     <div><span className="text-[11px] text-muted-foreground font-medium">Play Type:</span> <span className="text-sm font-medium">{selectedLeague.playType}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Sport:</span> <span className="text-sm font-medium">{selectedLeague.sport}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Fee:</span> <span className="text-sm font-bold">${selectedLeague.fee}/player</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Season:</span> <span className="text-sm font-medium">{selectedLeague.season}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Director:</span> <span className="text-sm font-medium">{selectedLeague.director}</span></div>
+                    {selectedLeague.divisions.length > 0 && <div className="col-span-2"><span className="text-[11px] text-muted-foreground font-medium">Divisions:</span> <span className="text-sm font-medium">{selectedLeague.divisions.length} Divisions: {selectedLeague.divisions.join(', ')}</span></div>}
+                  </div>
+                </div>
+                <div className="card-elevated rounded-lg p-4 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Match & Scoring</div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Match Format:</span> <span className="text-sm font-medium">{selectedLeague.matchFormat}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Scoring System:</span> <span className="text-sm font-medium">{selectedLeague.scoringSystem}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Standings Visibility:</span> <span className="text-sm font-medium">{selectedLeague.standingsVisibility}</span></div>
                   </div>
                 </div>
                 <div className="card-elevated rounded-lg p-4 space-y-2">
@@ -3546,25 +4559,84 @@ function LeaguesView() {
                 <div className="card-elevated rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead><tr className="border-b border-border">
-                      {['Date', 'Time', 'Court', 'Match', 'Score'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card">{h}</th>)}
+                      {['Rd', 'Date', 'Time', 'Court', 'Match', 'Score', 'Status', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card">{h}</th>)}
                     </tr></thead>
                     <tbody>
-                      {[{ date: 'Mar 3', time: '7 PM', court: 'Ct 1', match: 'Dink Masters vs Lobbers', score: '11-3, 11-5' }, { date: 'Mar 3', time: '7 PM', court: 'Ct 2', match: 'Net Ninjas vs Drop Shot', score: '11-7, 11-4' }, { date: 'Mar 3', time: '8 PM', court: 'Ct 1', match: 'Kitchen Crew vs Baseline', score: '11-8, 9-11, 11-6' }, { date: 'Mar 10', time: '7 PM', court: 'Ct 1', match: 'Paddle Pushers vs Vipers', score: '11-9, 11-7' }, { date: 'Mar 17', time: '7 PM', court: 'Ct 1', match: 'Dink Masters vs Net Ninjas', score: '—' }].map((m, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30"><td className="px-3 py-2.5 text-sm font-medium">{m.date}</td><td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{m.time}</td><td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{m.court}</td><td className="px-3 py-2.5 text-sm font-medium">{m.match}</td><td className="px-3 py-2.5 text-sm font-medium tabular-nums">{m.score}</td></tr>
+                      {MOCK_LEAGUE_SCHEDULE.map((m, i) => (
+                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${m.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground font-bold tabular-nums">{m.round}</td>
+                          <td className="px-3 py-2.5 text-sm font-medium">{m.date}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{m.time}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{m.court}</td>
+                          <td className="px-3 py-2.5 text-sm font-medium">{m.match}</td>
+                          <td className="px-3 py-2.5 text-sm font-medium tabular-nums">{m.score}</td>
+                          <td className="px-3 py-2.5"><StatusBadge status={m.status} /></td>
+                          <td className="px-3 py-2.5">{m.status === 'scheduled' && <Button variant="outline" className="h-6 text-[10px] font-bold px-2">Enter Score</Button>}</td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {leagueTab === 'Bracket' && selectedLeague.category === 'tournament' && (
+                <div className="space-y-4">
+                  <div className="card-elevated rounded-lg p-4 space-y-2">
+                    <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Tournament Bracket Visualization</div>
+                    <p className="text-xs text-muted-foreground">Single elimination bracket for {selectedLeague.name}</p>
+                  </div>
+                  <div className="card-elevated rounded-lg p-6">
+                    <div className="flex items-center gap-6">
+                      <div className="flex flex-col gap-12">
+                        <div className="space-y-1">
+                          <div className="border border-border rounded px-3 py-2 text-xs font-bold bg-card w-36">Team A</div>
+                          <div className="border border-border rounded px-3 py-2 text-xs font-medium text-muted-foreground bg-card w-36">Team B</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="border border-border rounded px-3 py-2 text-xs font-bold bg-card w-36">Team C</div>
+                          <div className="border border-border rounded px-3 py-2 text-xs font-medium text-muted-foreground bg-card w-36">Team D</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-12">
+                        <div className="w-8 h-16 border-r-2 border-t-2 border-b-2 border-border rounded-r" />
+                        <div className="w-8 h-16 border-r-2 border-t-2 border-b-2 border-border rounded-r" />
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <div className="space-y-1">
+                          <div className="border-2 border-primary rounded px-3 py-2 text-xs font-bold bg-primary/5 w-36">Winner SF1</div>
+                          <div className="border-2 border-primary rounded px-3 py-2 text-xs font-bold bg-primary/5 w-36">Winner SF2</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <div className="w-8 h-8 border-r-2 border-t-2 border-b-2 border-primary rounded-r" />
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <div className="border-2 border-yellow-500 rounded px-4 py-3 bg-yellow-500/10 w-36 text-center">
+                          <div className="text-[10px] font-medium text-yellow-600 uppercase tracking-wide">Champion</div>
+                          <div className="text-xs font-bold mt-0.5">TBD</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {leagueTab === 'Registrations' && (
                 <div className="card-elevated rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead><tr className="border-b border-border">
-                      {['Name', 'Status', 'Payment', 'Waiver'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card">{h}</th>)}
+                      {['Name', 'Team', 'Type', 'Division', 'Reg. Date', 'Payment', 'Waiver', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card">{h}</th>)}
                     </tr></thead>
                     <tbody>
-                      {['Jane & Alex', 'Tom & Sarah', 'Kevin & Priya', 'Mike & Rachel', 'Brandon & Maria', 'Chris & Emma', 'Daniel & Anika', 'Ryan & Lisa'].map((name, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30"><td className="px-3 py-2.5 text-sm font-medium">{name}</td><td className="px-3 py-2.5"><StatusBadge status="active" /></td><td className="px-3 py-2.5"><StatusBadge status="paid" /></td><td className="px-3 py-2.5"><CheckCircle2 className="w-4 h-4 text-green-600" /></td></tr>
+                      {MOCK_REGISTRATIONS.map((r, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="px-3 py-2.5 text-sm font-medium">{r.name}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{r.teamName}</td>
+                          <td className="px-3 py-2.5"><StatusBadge status={r.regType} /></td>
+                          <td className="px-3 py-2.5 text-xs font-medium">{r.division}</td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium">{r.regDate}</td>
+                          <td className="px-3 py-2.5"><StatusBadge status={r.payment} /></td>
+                          <td className="px-3 py-2.5"><CheckCircle2 className="w-4 h-4 text-green-600" /></td>
+                          <td className="px-3 py-2.5"><button className="p-1 rounded hover:bg-muted"><MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" /></button></td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -3582,13 +4654,13 @@ function LeaguesView() {
 // STAFF VIEW
 // ============================================================
 const MOCK_STAFF = [
-  { id: 'S001', name: 'Dragan Jovanovic', email: 'dragan@courtsideai.com', phone: '+1 (416) 555-0001', role: 'owner' as const, status: 'active' as const, hasCustomPerms: false, lastActive: 'Just now', dateAdded: 'Jan 1, 2025' },
-  { id: 'S002', name: 'Sarah Mitchell', email: 'sarah.m@courtsideai.com', phone: '+1 (647) 555-0002', role: 'director' as const, status: 'active' as const, hasCustomPerms: false, lastActive: '2h ago', dateAdded: 'Mar 1, 2025' },
-  { id: 'S003', name: 'Mike Thompson', email: 'mike.t@courtsideai.com', phone: '+1 (905) 555-0003', role: 'manager' as const, status: 'active' as const, hasCustomPerms: true, lastActive: '1h ago', dateAdded: 'Jun 15, 2025' },
-  { id: 'S004', name: 'Jessica Wong', email: 'jess.w@courtsideai.com', phone: '+1 (416) 555-0004', role: 'front_desk' as const, status: 'active' as const, hasCustomPerms: false, lastActive: '30m ago', dateAdded: 'Sep 1, 2025' },
-  { id: 'S005', name: 'Coach Sarah', email: 'coachsarah@email.com', phone: '+1 (647) 555-0005', role: 'instructor' as const, status: 'active' as const, hasCustomPerms: true, lastActive: '3h ago', dateAdded: 'Oct 15, 2025' },
-  { id: 'S006', name: 'Daniel Lee', email: 'daniel.l@email.com', phone: '+1 (905) 555-0006', role: 'instructor' as const, status: 'deactivated' as const, hasCustomPerms: false, lastActive: 'Feb 10, 2026', dateAdded: 'Nov 1, 2025' },
-  { id: 'S007', name: 'Emily Chen', email: 'emily.c@courtsideai.com', phone: '+1 (416) 555-0007', role: 'view_only' as const, status: 'pending' as const, hasCustomPerms: false, lastActive: 'Never', dateAdded: 'Mar 20, 2026' },
+  { id: 'S001', name: 'Dragan Jovanovic', email: 'dragan@courtsideai.com', phone: '+1 (416) 555-0001', role: 'owner' as const, status: 'active' as const, hasCustomPerms: false, lastActive: 'Just now', dateAdded: 'Jan 1, 2025', addedBy: 'System', emergencyContact: 'Ana Jovanovic — +1 (416) 555-9901', hasCustomerProfile: true, hasInstructorProfile: false },
+  { id: 'S002', name: 'Sarah Mitchell', email: 'sarah.m@courtsideai.com', phone: '+1 (647) 555-0002', role: 'director' as const, status: 'active' as const, hasCustomPerms: false, lastActive: '2h ago', dateAdded: 'Mar 1, 2025', addedBy: 'Dragan Jovanovic (Owner)', emergencyContact: 'James Mitchell — +1 (647) 555-9902', hasCustomerProfile: false, hasInstructorProfile: false },
+  { id: 'S003', name: 'Mike Thompson', email: 'mike.t@courtsideai.com', phone: '+1 (905) 555-0003', role: 'manager' as const, status: 'active' as const, hasCustomPerms: true, lastActive: '1h ago', dateAdded: 'Jun 15, 2025', addedBy: 'Sarah Mitchell (Director)', emergencyContact: 'Linda Thompson — +1 (905) 555-9903', hasCustomerProfile: true, hasInstructorProfile: false },
+  { id: 'S004', name: 'Jessica Wong', email: 'jess.w@courtsideai.com', phone: '+1 (416) 555-0004', role: 'front_desk' as const, status: 'active' as const, hasCustomPerms: false, lastActive: '30m ago', dateAdded: 'Sep 1, 2025', addedBy: 'Mike Thompson (Manager)', emergencyContact: 'Kevin Wong — +1 (416) 555-9904', hasCustomerProfile: false, hasInstructorProfile: false },
+  { id: 'S005', name: 'Coach Sarah', email: 'coachsarah@email.com', phone: '+1 (647) 555-0005', role: 'instructor' as const, status: 'active' as const, hasCustomPerms: true, lastActive: '3h ago', dateAdded: 'Oct 15, 2025', addedBy: 'Dragan Jovanovic (Owner)', emergencyContact: 'Tom Chen — +1 (647) 555-9905', hasCustomerProfile: true, hasInstructorProfile: true },
+  { id: 'S006', name: 'Daniel Lee', email: 'daniel.l@email.com', phone: '+1 (905) 555-0006', role: 'instructor' as const, status: 'deactivated' as const, hasCustomPerms: false, lastActive: 'Feb 10, 2026', dateAdded: 'Nov 1, 2025', addedBy: 'Sarah Mitchell (Director)', emergencyContact: 'Grace Lee — +1 (905) 555-9906', hasCustomerProfile: true, hasInstructorProfile: true },
+  { id: 'S007', name: 'Emily Chen', email: 'emily.c@courtsideai.com', phone: '+1 (416) 555-0007', role: 'view_only' as const, status: 'pending' as const, hasCustomPerms: false, lastActive: 'Never', dateAdded: 'Mar 20, 2026', addedBy: 'Mike Thompson (Manager)', emergencyContact: '', hasCustomerProfile: false, hasInstructorProfile: false },
 ];
 const STAFF_PERMISSIONS = [
   { section: 'Courts', perms: ['View schedule', 'Create bookings', 'Cancel any booking', 'Override booking rules', 'Manage court settings'] },
@@ -3616,6 +4688,23 @@ function StaffView() {
   const [staffTab, setStaffTab] = useState('Overview');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editingPerms, setEditingPerms] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteFirstName, setInviteFirstName] = useState('');
+  const [inviteLastName, setInviteLastName] = useState('');
+  const [inviteRole, setInviteRole] = useState('front_desk');
+  const [inviteCustomPerms, setInviteCustomPerms] = useState(false);
+  const ROLE_FILTERS = [
+    { value: 'all', label: 'All Roles' },
+    { value: 'owner', label: 'Owner' },
+    { value: 'director', label: 'Director' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'front_desk', label: 'Front Desk' },
+    { value: 'instructor', label: 'Instructor' },
+    { value: 'view_only', label: 'View-Only' },
+  ];
   if (selectedStaff) {
     return (
       <>
@@ -3644,30 +4733,68 @@ function StaffView() {
           <STabBar tabs={['Overview', 'Permissions', 'Activity']} active={staffTab} onChange={setStaffTab} />
           <div className="p-6 space-y-4">
             {staffTab === 'Overview' && (<>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="card-elevated rounded-lg p-4 space-y-3">
                   <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Contact Information</div>
                   <div className="space-y-2">
                     <div><span className="text-[11px] text-muted-foreground font-medium">Email:</span> <span className="text-sm font-medium">{selectedStaff.email}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Phone:</span> <span className="text-sm font-medium">{selectedStaff.phone}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Emergency Contact:</span> <span className="text-sm font-medium">{selectedStaff.emergencyContact || <span className="italic text-muted-foreground">Not provided</span>}</span></div>
                   </div>
                 </div>
                 <div className="card-elevated rounded-lg p-4 space-y-3">
                   <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Operational Info</div>
                   <div className="space-y-2">
                     <div><span className="text-[11px] text-muted-foreground font-medium">Date Added:</span> <span className="text-sm font-medium">{selectedStaff.dateAdded}</span></div>
+                    <div><span className="text-[11px] text-muted-foreground font-medium">Added by:</span> <span className="text-sm font-medium">{selectedStaff.addedBy}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Last Active:</span> <span className="text-sm font-medium">{selectedStaff.lastActive}</span></div>
                     <div><span className="text-[11px] text-muted-foreground font-medium">Role:</span> <span className="text-sm font-medium capitalize">{selectedStaff.role.replace(/_/g, ' ')}</span></div>
                   </div>
                 </div>
               </div>
+              {(selectedStaff.hasCustomerProfile || selectedStaff.hasInstructorProfile) && (
+                <div className="card-elevated rounded-lg p-4 space-y-3">
+                  <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Linked Records</div>
+                  <div className="space-y-2">
+                    {selectedStaff.hasCustomerProfile && (
+                      <button className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"><Users className="w-3.5 h-3.5" />Customer Profile</button>
+                    )}
+                    {selectedStaff.hasInstructorProfile && (
+                      <button className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"><GraduationCap className="w-3.5 h-3.5" />Instructor Profile</button>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="card-elevated rounded-lg p-4 space-y-2">
                 <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Internal Notes</div>
                 <p className="text-sm text-muted-foreground font-medium italic">No notes for this staff member.</p>
               </div>
+              {selectedStaff.role !== 'owner' && (
+                <div className="pt-2">
+                  {selectedStaff.status === 'deactivated' ? (
+                    <Button variant="outline" className="h-9 text-xs font-bold text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"><Power className="w-3.5 h-3.5 mr-1.5" />Reactivate Staff Member</Button>
+                  ) : (
+                    <Button variant="outline" className="h-9 text-xs font-bold text-destructive border-destructive/30 hover:bg-destructive/5"><Ban className="w-3.5 h-3.5 mr-1.5" />Deactivate Staff Member</Button>
+                  )}
+                </div>
+              )}
             </>)}
             {staffTab === 'Permissions' && (
               <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold">Permission Overrides</h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">Customize this staff member&apos;s access beyond their role defaults</p>
+                  </div>
+                  {!editingPerms ? (
+                    <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern" onClick={() => setEditingPerms(true)}><Pencil className="w-3 h-3 mr-1.5" />Edit Permissions</Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern" onClick={() => setEditingPerms(false)}>Cancel</Button>
+                      <Button className="h-8 text-[11px] font-bold px-4 btn-primary-modern" onClick={() => setEditingPerms(false)}>Save</Button>
+                    </div>
+                  )}
+                </div>
                 {STAFF_PERMISSIONS.map(section => (
                   <div key={section.section} className="card-elevated rounded-lg p-4 space-y-2">
                     <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{section.section}</div>
@@ -3675,8 +4802,8 @@ function StaffView() {
                       {section.perms.map((perm, i) => {
                         const hasAccess = selectedStaff.role === 'owner' || (selectedStaff.role === 'director' && i < 4) || (selectedStaff.role === 'manager' && i < 3) || (selectedStaff.role === 'front_desk' && i < 2) || (selectedStaff.role === 'instructor' && i < 1);
                         return (
-                          <div key={perm} className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${hasAccess ? 'bg-primary border-primary' : 'border-border'}`}>
+                          <div key={perm} className={`flex items-center gap-2 ${editingPerms ? 'cursor-pointer hover:bg-muted/30 -mx-1 px-1 py-0.5 rounded' : ''}`}>
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${hasAccess ? 'bg-primary border-primary' : 'border-border'} ${editingPerms ? 'ring-1 ring-primary/20' : ''}`}>
                               {hasAccess && <CheckCircle2 className="w-3 h-3 text-white" />}
                             </div>
                             <span className={`text-sm font-medium ${hasAccess ? '' : 'text-muted-foreground'}`}>{perm}</span>
@@ -3710,14 +4837,19 @@ function StaffView() {
   }
   return (
     <>
-      <SPageHeader title="Staff" badge={`${MOCK_STAFF.length} members`}><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><UserPlus className="w-3.5 h-3.5 mr-1.5" />Invite Staff</Button></SPageHeader>
+      <SPageHeader title="Staff" badge={`${MOCK_STAFF.length} members`}><Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setInviteModalOpen(true)}><UserPlus className="w-3.5 h-3.5 mr-1.5" />Invite Staff</Button></SPageHeader>
       <SToolbar>
         <SSearchInput placeholder="Search by name or email..." value={search} onChange={setSearch} />
-        <SFilterPill label="All Roles" active={roleFilter === 'all'} onClick={() => setRoleFilter('all')} />
-        <SFilterPill label="Active" active={roleFilter === 'active'} onClick={() => setRoleFilter('active')} />
-        <SFilterPill label="Deactivated" active={roleFilter === 'deactivated'} onClick={() => setRoleFilter('deactivated')} />
+        <div className="h-4 w-px bg-border mx-1" />
+        <SFilterPill label="All" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
+        <SFilterPill label="Active" active={statusFilter === 'active'} onClick={() => setStatusFilter('active')} />
+        <SFilterPill label="Deactivated" active={statusFilter === 'deactivated'} onClick={() => setStatusFilter('deactivated')} />
+        <div className="h-4 w-px bg-border mx-1" />
+        {ROLE_FILTERS.map(rf => (
+          <SFilterPill key={rf.value} label={rf.label} active={roleFilter === rf.value} onClick={() => setRoleFilter(rf.value)} />
+        ))}
       </SToolbar>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6">
         <div className="card-elevated rounded-lg overflow-hidden">
           <table className="w-full">
             <thead><tr className="border-b border-border">
@@ -3725,11 +4857,12 @@ function StaffView() {
             </tr></thead>
             <tbody>{MOCK_STAFF.filter(s => {
               if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.email.toLowerCase().includes(search.toLowerCase())) return false;
-              if (roleFilter === 'active') return s.status === 'active';
-              if (roleFilter === 'deactivated') return s.status === 'deactivated';
+              if (statusFilter === 'active' && s.status !== 'active') return false;
+              if (statusFilter === 'deactivated' && s.status !== 'deactivated') return false;
+              if (roleFilter !== 'all' && s.role !== roleFilter) return false;
               return true;
             }).map(s => (
-              <tr key={s.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => { setSelectedStaff(s); setStaffTab('Overview'); }}>
+              <tr key={s.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => { setSelectedStaff(s); setStaffTab('Overview'); setEditingPerms(false); }}>
                 <td className="px-4 py-2.5"><div className="flex items-center gap-2.5"><Avatar className="h-7 w-7"><AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">{s.name.split(' ').map(w => w[0]).join('')}</AvatarFallback></Avatar><span className="text-sm font-medium">{s.name}</span></div></td>
                 <td className="px-4 py-2.5"><StatusBadge status={s.role} /></td>
                 <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{s.email}</td>
@@ -3743,6 +4876,76 @@ function StaffView() {
           </table>
         </div>
       </div>
+
+      {/* Invite Staff Modal */}
+      {inviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => { setInviteModalOpen(false); setInviteEmail(''); setInviteFirstName(''); setInviteLastName(''); setInviteRole('front_desk'); setInviteCustomPerms(false); }}>
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" />
+          <div className="relative bg-card rounded-xl shadow-2xl w-[500px] mx-4 flex flex-col animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-lg font-bold">Invite Staff Member</h3>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Send an email invitation to join your facility</p>
+              </div>
+              <button onClick={() => { setInviteModalOpen(false); setInviteEmail(''); setInviteFirstName(''); setInviteLastName(''); setInviteRole('front_desk'); setInviteCustomPerms(false); }} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Email Address</label>
+                <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="staff@example.com" className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40" autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">First Name</label>
+                  <input value={inviteFirstName} onChange={e => setInviteFirstName(e.target.value)} placeholder="First name" className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Last Name</label>
+                  <input value={inviteLastName} onChange={e => setInviteLastName(e.target.value)} placeholder="Last name" className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Role</label>
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40">
+                  <option value="director">Director</option>
+                  <option value="manager">Manager</option>
+                  <option value="front_desk">Front Desk</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="view_only">View-Only</option>
+                </select>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Custom Permissions</div>
+                    <div className="text-xs text-muted-foreground font-medium">Override default role permissions</div>
+                  </div>
+                  <Switch checked={inviteCustomPerms} onCheckedChange={setInviteCustomPerms} />
+                </div>
+                {inviteCustomPerms && (
+                  <div className="border border-border rounded-lg p-3 space-y-3 max-h-48 overflow-y-auto">
+                    {STAFF_PERMISSIONS.map(section => (
+                      <div key={section.section} className="space-y-1">
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{section.section}</div>
+                        {section.perms.map(perm => (
+                          <div key={perm} className="flex items-center gap-2 cursor-pointer hover:bg-muted/30 px-1 py-0.5 rounded">
+                            <div className="w-4 h-4 rounded border border-border flex items-center justify-center hover:border-primary" />
+                            <span className="text-xs font-medium text-muted-foreground">{perm}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-2 shrink-0">
+              <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => { setInviteModalOpen(false); setInviteEmail(''); setInviteFirstName(''); setInviteLastName(''); setInviteRole('front_desk'); setInviteCustomPerms(false); }}>Cancel</Button>
+              <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => { setInviteModalOpen(false); setInviteEmail(''); setInviteFirstName(''); setInviteLastName(''); setInviteRole('front_desk'); setInviteCustomPerms(false); }}><Send className="w-3.5 h-3.5 mr-1.5" />Send Invitation</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -3774,51 +4977,169 @@ const MOCK_RENTALS = [
 function POSView() {
   const [tab, setTab] = useState('Inventory');
   const [search, setSearch] = useState('');
-  const lowStockCount = MOCK_INVENTORY.filter(i => i.stock > 0 && i.stock <= i.lowThreshold).length;
+  const [inventoryView, setInventoryView] = useState<'list' | 'category'>('list');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [registerOpen, setRegisterOpen] = useState(true);
+  const [closeRegisterModal, setCloseRegisterModal] = useState(false);
+  const [actualCash, setActualCash] = useState('');
+  const [posModeOpen, setPosModeOpen] = useState(false);
+  const [returnModal, setReturnModal] = useState<typeof MOCK_RENTALS[0] | null>(null);
+  const [returnCondition, setReturnCondition] = useState('good');
+  const [returnNotes, setReturnNotes] = useState('');
+
+  const lowStockCount = MOCK_INVENTORY.filter(i => (i.stock > 0 && i.stock <= i.lowThreshold) || (i.stock === 0 && i.category !== 'service')).length;
+  const outOfStockCount = MOCK_INVENTORY.filter(i => i.stock === 0 && i.category !== 'service').length;
+
+  const REGISTER_TRANSACTIONS = [
+    { time: '2:15 PM', customer: 'Jane Doe', items: 2, amount: 95.98, method: 'Card' as const, staff: 'Jessica' },
+    { time: '1:30 PM', customer: 'Walk-in', items: 1, amount: 2.50, method: 'Cash' as const, staff: 'Jessica' },
+    { time: '12:45 PM', customer: 'Tom Kim', items: 3, amount: 26.48, method: 'Apple Pay' as const, staff: 'Mike T.' },
+    { time: '11:20 AM', customer: 'Emma Singh', items: 1, amount: 14.99, method: 'Card' as const, staff: 'Jessica' },
+    { time: '10:00 AM', customer: 'Mike Russo', items: 2, amount: 65.00, method: 'Cash' as const, staff: 'Jessica' },
+    { time: '9:30 AM', customer: 'Walk-in', items: 1, amount: 4.00, method: 'Card' as const, staff: 'Jessica' },
+  ];
+  const totalSales = REGISTER_TRANSACTIONS.reduce((s, t) => s + t.amount, 0);
+  const cashSales = REGISTER_TRANSACTIONS.filter(t => t.method === 'Cash').reduce((s, t) => s + t.amount, 0);
+  const cardSales = totalSales - cashSales;
+  const openingFloat = 200;
+  const expectedCash = openingFloat + cashSales;
+
+  const filteredInventory = MOCK_INVENTORY.filter(i => {
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (categoryFilter !== 'all' && i.category !== categoryFilter) return false;
+    if (stockFilter === 'low' && !(i.stock > 0 && i.stock <= i.lowThreshold)) return false;
+    if (stockFilter === 'out' && !(i.stock === 0 && i.category !== 'service')) return false;
+    if (stockFilter === 'in' && (i.stock === 0 && i.category !== 'service')) return false;
+    return true;
+  });
+
+  const categoryGroups = [
+    { key: 'retail', label: 'Retail', icon: Package },
+    { key: 'fnb', label: 'Food & Beverage', icon: ShoppingBag },
+    { key: 'equipment', label: 'Equipment Rental', icon: Wrench },
+    { key: 'service', label: 'Services', icon: Star },
+  ];
+
   return (
     <>
-      <SPageHeader title="Point of Sale"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><ShoppingBag className="w-3.5 h-3.5 mr-1.5" />Enter POS Mode</Button></SPageHeader>
-      <STabBar tabs={['Inventory', 'Equipment', 'Register']} active={tab} onChange={setTab} />
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <SPageHeader title="Point of Sale"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setPosModeOpen(true)}><ShoppingBag className="w-3.5 h-3.5 mr-1.5" />Enter POS Mode</Button></SPageHeader>
+      <div className="flex items-center border-b border-border px-3 md:px-6 bg-card shrink-0 overflow-x-auto">
+        {(['Inventory', 'Equipment', 'Register'] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => setTab(tabKey)}
+            className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold border-b-2 transition-colors -mb-px whitespace-nowrap flex items-center gap-1.5 ${tab === tabKey ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+            {tabKey}
+            {tabKey === 'Inventory' && lowStockCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">{lowStockCount}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {tab === 'Inventory' && (<>
           {lowStockCount > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
               <AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0" />
-              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">{lowStockCount} items are low on stock</span>
+              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">{lowStockCount} items need attention ({outOfStockCount} out of stock)</span>
             </div>
           )}
           <SToolbar>
             <SSearchInput placeholder="Search inventory..." value={search} onChange={setSearch} />
-            <SFilterPill label="All Categories" active={true} onClick={() => {}} />
-            <SFilterPill label="All Stock" active={false} onClick={() => {}} />
+            <SFilterPill label="All Categories" active={categoryFilter === 'all'} onClick={() => setCategoryFilter('all')} />
+            <SFilterPill label="Retail" active={categoryFilter === 'retail'} onClick={() => setCategoryFilter(categoryFilter === 'retail' ? 'all' : 'retail')} />
+            <SFilterPill label="F&B" active={categoryFilter === 'fnb'} onClick={() => setCategoryFilter(categoryFilter === 'fnb' ? 'all' : 'fnb')} />
+            <SFilterPill label="Equipment" active={categoryFilter === 'equipment'} onClick={() => setCategoryFilter(categoryFilter === 'equipment' ? 'all' : 'equipment')} />
+            <SFilterPill label="Services" active={categoryFilter === 'service'} onClick={() => setCategoryFilter(categoryFilter === 'service' ? 'all' : 'service')} />
+            <div className="w-px h-5 bg-border mx-1" />
+            <SFilterPill label="All Stock" active={stockFilter === 'all'} onClick={() => setStockFilter('all')} />
+            <SFilterPill label="Low Stock" active={stockFilter === 'low'} onClick={() => setStockFilter(stockFilter === 'low' ? 'all' : 'low')} />
+            <SFilterPill label="Out of Stock" active={stockFilter === 'out'} onClick={() => setStockFilter(stockFilter === 'out' ? 'all' : 'out')} />
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => setInventoryView('list')} className={`p-1.5 rounded ${inventoryView === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`} title="List View"><List className="w-4 h-4" /></button>
+              <button onClick={() => setInventoryView('category')} className={`p-1.5 rounded ${inventoryView === 'category' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`} title="Category View"><PieChart className="w-4 h-4" /></button>
+            </div>
           </SToolbar>
-          <div className="card-elevated rounded-lg overflow-x-auto">
-            <table className="w-full">
-              <thead><tr className="border-b border-border">
-                {['Item', 'Category', 'SKU', 'Stock', 'Cost', 'Price', 'Margin', 'Status', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
-              </tr></thead>
-              <tbody>{MOCK_INVENTORY.filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
-                <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30">
-                  <td className="px-4 py-2.5 text-sm font-medium">{item.name}</td>
-                  <td className="px-4 py-2.5"><StatusBadge status={item.category} /></td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono font-medium">{item.sku}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="text-sm font-medium tabular-nums">{item.category === 'service' ? '∞' : item.stock}</span>
-                    {item.stock > 0 && item.stock <= item.lowThreshold && <span className="ml-1.5 text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded uppercase">Low</span>}
-                    {item.stock === 0 && item.category !== 'service' && <span className="ml-1.5 text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded uppercase">Out</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums font-medium">${item.cost.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${item.price.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{item.margin}%</td>
-                  <td className="px-4 py-2.5"><StatusBadge status={item.status} /></td>
-                  <td className="px-4 py-2.5"><button className="p-1 rounded hover:bg-muted"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
+
+          {inventoryView === 'list' ? (
+            <div className="card-elevated rounded-lg overflow-x-auto">
+              <table className="w-full">
+                <thead><tr className="border-b border-border">
+                  {['Item', 'Category', 'SKU', 'Stock', 'Cost', 'Price', 'Margin', 'Status', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
+                </tr></thead>
+                <tbody>{filteredInventory.map(item => (
+                  <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30">
+                    <td className="px-4 py-2.5 text-sm font-medium">{item.name}</td>
+                    <td className="px-4 py-2.5"><StatusBadge status={item.category} /></td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono font-medium">{item.sku}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="text-sm font-medium tabular-nums">{item.category === 'service' ? '∞' : item.stock}</span>
+                      {item.stock > 0 && item.stock <= item.lowThreshold && <span className="ml-1.5 text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded uppercase">Low</span>}
+                      {item.stock === 0 && item.category !== 'service' && <span className="ml-1.5 text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded uppercase">Out</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums font-medium">${item.cost.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium tabular-nums">${item.price.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium tabular-nums">{item.margin}%</td>
+                    <td className="px-4 py-2.5"><StatusBadge status={item.status} /></td>
+                    <td className="px-4 py-2.5"><button className="p-1 rounded hover:bg-muted"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {categoryGroups.map(cg => {
+                const items = MOCK_INVENTORY.filter(i => i.category === cg.key);
+                if (items.length === 0) return null;
+                const itemCount = items.length;
+                const totalStockValue = items.reduce((s, i) => s + (i.category === 'service' ? 0 : i.stock * i.cost), 0);
+                const avgMargin = Math.round(items.reduce((s, i) => s + i.margin, 0) / items.length);
+                const lowCount = items.filter(i => (i.stock > 0 && i.stock <= i.lowThreshold) || (i.stock === 0 && i.category !== 'service')).length;
+                const IconComp = cg.icon;
+                return (
+                  <div key={cg.key} className="card-elevated rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center"><IconComp className="w-4 h-4 text-primary" /></div>
+                        <div>
+                          <h3 className="text-sm font-bold">{cg.label}</h3>
+                          <p className="text-xs text-muted-foreground">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      {lowCount > 0 && <span className="text-[9px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full uppercase">{lowCount} low</span>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {cg.key !== 'service' && (
+                        <div>
+                          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Stock Value</div>
+                          <div className="text-base font-bold tabular-nums">${totalStockValue.toFixed(2)}</div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Avg Margin</div>
+                        <div className="text-base font-bold tabular-nums">{avgMargin}%</div>
+                      </div>
+                    </div>
+                    <div className="border-t border-border pt-2 space-y-1">
+                      {items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between text-xs py-1">
+                          <span className="font-medium truncate mr-2">{item.name}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-muted-foreground tabular-nums">{item.category === 'service' ? '∞' : item.stock} in stock</span>
+                            <span className="font-medium tabular-nums">${item.price.toFixed(2)}</span>
+                            {item.stock > 0 && item.stock <= item.lowThreshold && <span className="text-[8px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1 py-0.5 rounded uppercase">Low</span>}
+                            {item.stock === 0 && item.category !== 'service' && <span className="text-[8px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 px-1 py-0.5 rounded uppercase">Out</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>)}
         {tab === 'Equipment' && (<>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SMetricCard label="Available" value={`${MOCK_INVENTORY.filter(i => i.category === 'equipment').reduce((s, i) => s + i.stock, 0)}`} />
             <SMetricCard label="Checked Out" value={`${MOCK_RENTALS.filter(r => r.status === 'active').length}`} />
             <SMetricCard label="Overdue" value={`${MOCK_RENTALS.filter(r => r.status === 'overdue').length}`} trend={MOCK_RENTALS.filter(r => r.status === 'overdue').length > 0 ? 'Needs attention' : undefined} trendUp={false} />
@@ -3836,7 +5157,7 @@ function POSView() {
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{r.checkedOut}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{r.bookingEnd}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-2.5"><Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">Return</Button></td>
+                  <td className="px-4 py-2.5"><Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern" onClick={() => { setReturnModal(r); setReturnCondition('good'); setReturnNotes(''); }}>Return</Button></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -3847,14 +5168,53 @@ function POSView() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Front Desk Register</div>
-                <div className="flex items-center gap-2 mt-1"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="text-sm font-bold">Open</span><span className="text-xs text-muted-foreground font-medium">· Session started 9:00 AM</span></div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${registerOpen ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                  <span className="text-sm font-bold">{registerOpen ? 'Open' : 'Closed'}</span>
+                  {registerOpen && <span className="text-xs text-muted-foreground font-medium">· Session started 9:00 AM</span>}
+                </div>
               </div>
-              <div className="flex gap-4 text-right">
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Transactions</div><div className="text-lg font-bold">23</div></div>
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Revenue</div><div className="text-lg font-bold">$1,247.50</div></div>
+              <div className="flex items-center gap-4">
+                {registerOpen && (
+                  <div className="flex gap-4 text-right">
+                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Transactions</div><div className="text-lg font-bold">23</div></div>
+                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Revenue</div><div className="text-lg font-bold">${totalSales.toFixed(2)}</div></div>
+                  </div>
+                )}
+                <Button
+                  variant={registerOpen ? 'outline' : 'default'}
+                  className={`h-9 text-xs font-bold px-4 ${registerOpen ? 'btn-outline-modern' : 'btn-primary-modern'}`}
+                  onClick={() => { if (registerOpen) { setCloseRegisterModal(true); } else { setRegisterOpen(true); } }}
+                >
+                  <Power className="w-3.5 h-3.5 mr-1.5" />{registerOpen ? 'Close Register' : 'Open Register'}
+                </Button>
               </div>
             </div>
           </div>
+
+          {registerOpen && (
+            <div className="card-elevated rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-bold">Cash Drawer</span>
+              </div>
+              <div className="flex items-center gap-6">
+                <div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Opening Float</div>
+                  <div className="text-base font-bold tabular-nums">${openingFloat.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Cash Sales</div>
+                  <div className="text-base font-bold tabular-nums">${cashSales.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Expected Total</div>
+                  <div className="text-base font-bold tabular-nums">${expectedCash.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="card-elevated rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-border"><h3 className="text-sm font-bold">Today&apos;s Register Activity</h3></div>
             <table className="w-full">
@@ -3862,7 +5222,7 @@ function POSView() {
                 {['Time', 'Customer', 'Items', 'Amount', 'Method', 'Staff'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
               </tr></thead>
               <tbody>
-                {[{ time: '2:15 PM', customer: 'Jane Doe', items: 2, amount: 95.98, method: 'Card', staff: 'Jessica' }, { time: '1:30 PM', customer: 'Walk-in', items: 1, amount: 2.50, method: 'Cash', staff: 'Jessica' }, { time: '12:45 PM', customer: 'Tom Kim', items: 3, amount: 26.48, method: 'Apple Pay', staff: 'Mike T.' }, { time: '11:20 AM', customer: 'Emma Singh', items: 1, amount: 14.99, method: 'Card', staff: 'Jessica' }, { time: '10:00 AM', customer: 'Mike Russo', items: 2, amount: 65.00, method: 'Cash', staff: 'Jessica' }, { time: '9:30 AM', customer: 'Walk-in', items: 1, amount: 4.00, method: 'Card', staff: 'Jessica' }].map((tx, i) => (
+                {REGISTER_TRANSACTIONS.map((tx, i) => (
                   <tr key={i} className="border-b border-border/50 hover:bg-muted/30"><td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.time}</td><td className="px-4 py-2.5 text-sm font-medium">{tx.customer}</td><td className="px-4 py-2.5 text-sm font-medium tabular-nums">{tx.items}</td><td className="px-4 py-2.5 text-sm font-medium tabular-nums">${tx.amount.toFixed(2)}</td><td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.method}</td><td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{tx.staff}</td></tr>
                 ))}
               </tbody>
@@ -3870,6 +5230,145 @@ function POSView() {
           </div>
         </>)}
       </div>
+
+      {closeRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setCloseRegisterModal(false)}>
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" />
+          <div className="relative bg-card rounded-xl shadow-2xl w-[480px] p-6 space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold">Close Register</h3>
+            <p className="text-sm text-muted-foreground">Review the session summary before closing.</p>
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Opening Float</span><span className="font-bold tabular-nums">${openingFloat.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Sales</span><span className="font-bold tabular-nums">${totalSales.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Cash Sales</span><span className="font-bold tabular-nums">${cashSales.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Card / Digital Sales</span><span className="font-bold tabular-nums">${cardSales.toFixed(2)}</span></div>
+              <Separator />
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expected Cash</span><span className="font-bold tabular-nums">${expectedCash.toFixed(2)}</span></div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Actual Cash</span>
+                <input type="text" value={actualCash} onChange={e => setActualCash(e.target.value)} placeholder={expectedCash.toFixed(2)} className="w-28 h-8 px-2 text-sm font-bold tabular-nums text-right rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              {actualCash && !isNaN(parseFloat(actualCash)) && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Variance</span>
+                  <span className={`font-bold tabular-nums ${parseFloat(actualCash) - expectedCash === 0 ? 'text-green-600' : parseFloat(actualCash) - expectedCash > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    {parseFloat(actualCash) - expectedCash >= 0 ? '+' : ''}${(parseFloat(actualCash) - expectedCash).toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => setCloseRegisterModal(false)}>Cancel</Button>
+              <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => { setCloseRegisterModal(false); setRegisterOpen(false); setActualCash(''); }}>Confirm Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {returnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setReturnModal(null)}>
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" />
+          <div className="relative bg-card rounded-xl shadow-2xl w-[420px] p-6 space-y-4 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold">Return Equipment</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Equipment</span><span className="font-bold">{returnModal.equipment}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Customer</span><span className="font-bold">{returnModal.customer}</span></div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Condition</label>
+                <div className="flex gap-2 mt-1.5">
+                  {(['good', 'damaged', 'lost'] as const).map(c => (
+                    <button key={c} onClick={() => setReturnCondition(c)}
+                      className={`h-8 px-3 rounded-md text-xs font-bold transition-colors capitalize ${returnCondition === c ? (c === 'good' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300') : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {(returnCondition === 'damaged' || returnCondition === 'lost') && (<>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Damage Notes</label>
+                  <textarea value={returnNotes} onChange={e => setReturnNotes(e.target.value)} placeholder="Describe the damage..." className="w-full mt-1.5 h-16 px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                </div>
+                <div className="flex justify-between text-sm p-2 rounded-md bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
+                  <span className="text-red-700 dark:text-red-300 font-medium">Damage Fee</span>
+                  <span className="font-bold text-red-700 dark:text-red-300">{returnCondition === 'lost' ? '$50.00' : '$25.00'}</span>
+                </div>
+              </>)}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => setReturnModal(null)}>Cancel</Button>
+              <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setReturnModal(null)}><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Confirm Return</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {posModeOpen && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
+            <div className="flex items-center gap-3">
+              <ShoppingBag className="w-5 h-5 text-primary" />
+              <span className="text-base font-bold">POS Mode</span>
+              <span className="text-xs text-muted-foreground font-medium">Front Desk Register</span>
+            </div>
+            <Button variant="outline" className="h-8 text-xs font-bold btn-outline-modern" onClick={() => setPosModeOpen(false)}><X className="w-3.5 h-3.5 mr-1.5" />Exit POS Mode</Button>
+          </div>
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 flex flex-col border-r border-border">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30 shrink-0">
+                {['Retail', 'F&B', 'Equipment', 'Services'].map((cat, idx) => (
+                  <button key={cat} className={`h-9 px-4 rounded-lg text-xs font-bold transition-colors ${idx === 0 ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted border border-border'}`}>{cat}</button>
+                ))}
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {MOCK_INVENTORY.filter(i => i.category === 'retail' && i.status === 'active').map(item => (
+                    <button key={item.id} className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-border bg-card hover:border-primary hover:shadow-md transition-all text-center min-h-[100px]">
+                      <Package className="w-6 h-6 text-muted-foreground mb-2" />
+                      <span className="text-xs font-bold leading-tight">{item.name}</span>
+                      <span className="text-sm font-bold text-primary mt-1 tabular-nums">${item.price.toFixed(2)}</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">{item.stock} in stock</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="w-[340px] flex flex-col bg-card">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-muted-foreground" />
+                  <input type="text" placeholder="Customer lookup..." className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground" readOnly />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
+                  <div><span className="text-sm font-medium">PB Paddle — Pro</span><div className="text-xs text-muted-foreground">Qty: 1</div></div>
+                  <span className="text-sm font-bold tabular-nums">$89.99</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
+                  <div><span className="text-sm font-medium">Water Bottle</span><div className="text-xs text-muted-foreground">Qty: 2</div></div>
+                  <span className="text-sm font-bold tabular-nums">$5.00</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/50">
+                  <div><span className="text-sm font-medium">Grip Tape</span><div className="text-xs text-muted-foreground">Qty: 1</div></div>
+                  <span className="text-sm font-bold tabular-nums">$7.99</span>
+                </div>
+              </div>
+              <div className="border-t border-border p-4 space-y-3">
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal (4 items)</span><span className="font-bold tabular-nums">$102.98</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax (13%)</span><span className="font-bold tabular-nums">$13.39</span></div>
+                <Separator />
+                <div className="flex justify-between"><span className="text-base font-bold">Total</span><span className="text-lg font-bold tabular-nums">$116.37</span></div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button className="h-10 text-xs font-bold btn-primary-modern"><CreditCard className="w-3.5 h-3.5 mr-1" />Card</Button>
+                  <Button variant="outline" className="h-10 text-xs font-bold btn-outline-modern"><DollarSign className="w-3.5 h-3.5 mr-1" />Cash</Button>
+                  <Button variant="outline" className="h-10 text-xs font-bold btn-outline-modern"><Merge className="w-3.5 h-3.5 mr-1" />Split</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -3878,103 +5377,222 @@ function POSView() {
 // COMMUNICATIONS VIEW
 // ============================================================
 const MOCK_MESSAGES = [
-  { id: 'M001', date: 'Mar 21, 2:15 PM', recipient: 'Jane Doe', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 1', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M002', date: 'Mar 21, 2:15 PM', recipient: 'Jane Doe', channel: 'sms' as const, type: 'reminder' as const, subject: 'Your PB booking starts in 1 hour', status: 'delivered' as const, triggeredBy: 'System' },
-  { id: 'M003', date: 'Mar 21, 1:30 PM', recipient: 'Alex Martin', channel: 'email' as const, type: 'transactional' as const, subject: 'Membership Renewal — March', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M004', date: 'Mar 21, 10:00 AM', recipient: '147 customers', channel: 'email' as const, type: 'marketing' as const, subject: 'Spring Special — 20% Off All Bookings', status: 'sent' as const, triggeredBy: 'Sarah M.' },
-  { id: 'M005', date: 'Mar 20, 8:00 PM', recipient: 'Lisa Park', channel: 'email' as const, type: 'transactional' as const, subject: 'Payment Failed — Gold Membership', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M006', date: 'Mar 20, 6:00 PM', recipient: 'Kevin Nguyen', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Cancelled — Refund Processed', status: 'delivered' as const, triggeredBy: 'System' },
-  { id: 'M007', date: 'Mar 20, 4:30 PM', recipient: 'Rachel Gomez', channel: 'email' as const, type: 'transactional' as const, subject: 'Enrolled in PB Beginner Clinic', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M008', date: 'Mar 20, 2:00 PM', recipient: 'David Wright', channel: 'email' as const, type: 'marketing' as const, subject: 'We Miss You — 20% Off Your Next Booking', status: 'bounced' as const, triggeredBy: 'AI Marketing' },
-  { id: 'M009', date: 'Mar 20, 11:00 AM', recipient: 'Brandon Fisher', channel: 'sms' as const, type: 'reminder' as const, subject: 'Reminder: Tennis tomorrow 8 AM', status: 'delivered' as const, triggeredBy: 'System' },
-  { id: 'M010', date: 'Mar 19, 5:00 PM', recipient: 'Priya Patel', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 1', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M011', date: 'Mar 19, 3:00 PM', recipient: 'Chris Taylor', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 2', status: 'delivered' as const, triggeredBy: 'System' },
-  { id: 'M012', date: 'Mar 19, 10:00 AM', recipient: 'All Members', channel: 'email' as const, type: 'announcement' as const, subject: 'New Court Hours Starting April 1', status: 'sent' as const, triggeredBy: 'Dragan J.' },
-  { id: 'M013', date: 'Mar 18, 6:00 PM', recipient: 'Olivia Brown', channel: 'email' as const, type: 'transactional' as const, subject: 'Welcome to Kings Court Markham!', status: 'opened' as const, triggeredBy: 'System' },
-  { id: 'M014', date: 'Mar 18, 2:00 PM', recipient: 'Maria Santos', channel: 'sms' as const, type: 'reminder' as const, subject: 'Your membership renews in 7 days', status: 'delivered' as const, triggeredBy: 'System' },
-  { id: 'M015', date: 'Mar 17, 9:00 AM', recipient: '32 customers', channel: 'email' as const, type: 'marketing' as const, subject: 'New PB Clinic Starting — Register Now', status: 'sent' as const, triggeredBy: 'Sarah M.' },
+  { id: 'M001', date: 'Mar 21, 2:15 PM', recipient: 'Jane Doe', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 1', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Confirmed', campaign: null as string | null, relatedEntity: 'Booking #B1042' },
+  { id: 'M002', date: 'Mar 21, 2:15 PM', recipient: 'Jane Doe', channel: 'sms' as const, type: 'reminder' as const, subject: 'Your PB booking starts in 1 hour', status: 'delivered' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Reminder (1h)', campaign: null as string | null, relatedEntity: 'Booking #B1042' },
+  { id: 'M003', date: 'Mar 21, 1:30 PM', recipient: 'Alex Martin', channel: 'email' as const, type: 'transactional' as const, subject: 'Membership Renewal — March', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Membership Welcome', campaign: null as string | null, relatedEntity: 'Membership Gold' },
+  { id: 'M016', date: 'Mar 21, 12:45 PM', recipient: 'Tom Kim', channel: 'voice' as const, type: 'transactional' as const, subject: 'AI Inbound Call — Booking inquiry for Tennis', status: 'delivered' as const, triggeredBy: 'AI Voice', direction: 'inbound' as const, template: null as string | null, campaign: null as string | null, relatedEntity: 'Call #V203 (2m 14s)' },
+  { id: 'M004', date: 'Mar 21, 10:00 AM', recipient: '147 customers', channel: 'email' as const, type: 'marketing' as const, subject: 'Spring Special — 20% Off All Bookings', status: 'sent' as const, triggeredBy: 'Sarah M.', direction: 'outbound' as const, template: 'Spring Promo Email', campaign: 'Spring Special — 20% Off', relatedEntity: null as string | null },
+  { id: 'M017', date: 'Mar 21, 9:30 AM', recipient: 'Emma Singh', channel: 'email' as const, type: 'transactional' as const, subject: 'RE: Booking Confirmed — Can I change to 3 PM?', status: 'delivered' as const, triggeredBy: 'Customer', direction: 'inbound' as const, template: null as string | null, campaign: null as string | null, relatedEntity: 'Booking #B1038' },
+  { id: 'M018', date: 'Mar 21, 9:15 AM', recipient: 'Mike Russo', channel: 'voice' as const, type: 'marketing' as const, subject: 'AI Outbound — Win-back call (lapsed 45 days)', status: 'delivered' as const, triggeredBy: 'AI Marketing', direction: 'outbound' as const, template: null as string | null, campaign: 'Win-Back Lapsed Customers', relatedEntity: 'Call #V201 (1m 48s)' },
+  { id: 'M005', date: 'Mar 20, 8:00 PM', recipient: 'Lisa Park', channel: 'email' as const, type: 'transactional' as const, subject: 'Payment Failed — Gold Membership', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Payment Failed', campaign: null as string | null, relatedEntity: 'Invoice #INV-2026-089' },
+  { id: 'M006', date: 'Mar 20, 6:00 PM', recipient: 'Kevin Nguyen', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Cancelled — Refund Processed', status: 'delivered' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Cancelled', campaign: null as string | null, relatedEntity: 'Booking #B1035' },
+  { id: 'M007', date: 'Mar 20, 4:30 PM', recipient: 'Rachel Gomez', channel: 'email' as const, type: 'transactional' as const, subject: 'Enrolled in PB Beginner Clinic', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Program Enrollment', campaign: null as string | null, relatedEntity: 'Program: PB Clinic' },
+  { id: 'M019', date: 'Mar 20, 3:00 PM', recipient: 'Brandon Fisher', channel: 'sms' as const, type: 'transactional' as const, subject: 'STOP received — unsubscribed from SMS marketing', status: 'delivered' as const, triggeredBy: 'Customer', direction: 'inbound' as const, template: null as string | null, campaign: null as string | null, relatedEntity: null as string | null },
+  { id: 'M008', date: 'Mar 20, 2:00 PM', recipient: 'David Wright', channel: 'email' as const, type: 'marketing' as const, subject: 'We Miss You — 20% Off Your Next Booking', status: 'bounced' as const, triggeredBy: 'AI Marketing', direction: 'outbound' as const, template: 'Win-Back Email', campaign: 'Win-Back Lapsed Customers', relatedEntity: null as string | null },
+  { id: 'M009', date: 'Mar 20, 11:00 AM', recipient: 'Brandon Fisher', channel: 'sms' as const, type: 'reminder' as const, subject: 'Reminder: Tennis tomorrow 8 AM', status: 'delivered' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Reminder (24h)', campaign: null as string | null, relatedEntity: 'Booking #B1031' },
+  { id: 'M010', date: 'Mar 19, 5:00 PM', recipient: 'Priya Patel', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 1', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Confirmed', campaign: null as string | null, relatedEntity: 'Booking #B1028' },
+  { id: 'M020', date: 'Mar 19, 4:00 PM', recipient: 'Anika Sharma', channel: 'voice' as const, type: 'transactional' as const, subject: 'AI Inbound Call — Class schedule inquiry', status: 'delivered' as const, triggeredBy: 'AI Voice', direction: 'inbound' as const, template: null as string | null, campaign: null as string | null, relatedEntity: 'Call #V198 (3m 02s)' },
+  { id: 'M011', date: 'Mar 19, 3:00 PM', recipient: 'Chris Taylor', channel: 'email' as const, type: 'transactional' as const, subject: 'Booking Confirmed — Pickleball on Court 2', status: 'delivered' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Booking Confirmed', campaign: null as string | null, relatedEntity: 'Booking #B1026' },
+  { id: 'M012', date: 'Mar 19, 10:00 AM', recipient: 'All Members', channel: 'email' as const, type: 'announcement' as const, subject: 'New Court Hours Starting April 1', status: 'sent' as const, triggeredBy: 'Dragan J.', direction: 'outbound' as const, template: null as string | null, campaign: 'New Court Hours Announcement', relatedEntity: null as string | null },
+  { id: 'M013', date: 'Mar 18, 6:00 PM', recipient: 'Olivia Brown', channel: 'email' as const, type: 'transactional' as const, subject: 'Welcome to Kings Court Markham!', status: 'opened' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Membership Welcome', campaign: null as string | null, relatedEntity: null as string | null },
+  { id: 'M014', date: 'Mar 18, 2:00 PM', recipient: 'Maria Santos', channel: 'sms' as const, type: 'reminder' as const, subject: 'Your membership renews in 7 days', status: 'delivered' as const, triggeredBy: 'System', direction: 'outbound' as const, template: 'Membership Renewal Reminder', campaign: null as string | null, relatedEntity: 'Membership Silver' },
+  { id: 'M015', date: 'Mar 17, 9:00 AM', recipient: '32 customers', channel: 'email' as const, type: 'marketing' as const, subject: 'New PB Clinic Starting — Register Now', status: 'sent' as const, triggeredBy: 'Sarah M.', direction: 'outbound' as const, template: null as string | null, campaign: 'PB Clinic Registration Push', relatedEntity: 'Program: PB Clinic' },
 ];
 const MOCK_CAMPAIGNS = [
-  { id: 'C001', name: 'Spring Special — 20% Off', type: 'marketing' as const, audience: 147, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 21, 2026', delivered: 142, opened: 89, clicked: 34 },
-  { id: 'C002', name: 'New Court Hours Announcement', type: 'announcement' as const, audience: 210, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 19, 2026', delivered: 205, opened: 156, clicked: 12 },
-  { id: 'C003', name: 'PB Clinic Registration Push', type: 'marketing' as const, audience: 32, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 17, 2026', delivered: 31, opened: 22, clicked: 8 },
-  { id: 'C004', name: 'April Member Newsletter', type: 'announcement' as const, audience: 186, channel: 'email' as const, status: 'draft' as const },
+  { id: 'C001', name: 'Spring Special — 20% Off', type: 'marketing' as const, audience: 147, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 21, 2026', delivered: 142, opened: 89, clicked: 34, bounced: 3, unsubscribed: 2, promo: 'SPRING20', segment: 'Active Members' },
+  { id: 'C002', name: 'New Court Hours Announcement', type: 'announcement' as const, audience: 210, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 19, 2026', delivered: 205, opened: 156, clicked: 12, bounced: 1, unsubscribed: 0, segment: 'All Customers' },
+  { id: 'C003', name: 'PB Clinic Registration Push', type: 'marketing' as const, audience: 32, channel: 'email' as const, status: 'sent' as const, sendDate: 'Mar 17, 2026', delivered: 31, opened: 22, clicked: 8, bounced: 0, unsubscribed: 1, segment: 'Pickleball Players' },
+  { id: 'C005', name: 'Win-Back Lapsed Customers', type: 'marketing' as const, audience: 24, channel: 'email' as const, status: 'sending' as const, sendDate: 'Mar 21, 2026', delivered: 18, opened: 0, clicked: 0, bounced: 1, unsubscribed: 0, promo: 'COMEBACK15', segment: 'Lapsed 30+ Days' },
+  { id: 'C006', name: 'Weekend Open Play Reminder', type: 'marketing' as const, audience: 89, channel: 'sms' as const, status: 'scheduled' as const, sendDate: 'Mar 22, 2026 — 10:00 AM', segment: 'Open Play Regulars' },
+  { id: 'C004', name: 'April Member Newsletter', type: 'announcement' as const, audience: 186, channel: 'email' as const, status: 'draft' as const, segment: 'All Members' },
+  { id: 'C007', name: 'Membership Renewal Push — Q2', type: 'marketing' as const, audience: 41, channel: 'email' as const, status: 'cancelled' as const, sendDate: 'Mar 15, 2026', segment: 'Expiring Memberships' },
+];
+const SYSTEM_TEMPLATES = [
+  { name: 'Booking Confirmed', type: 'transactional', channels: ['email', 'sms'], category: 'Courts' },
+  { name: 'Booking Reminder (24h)', type: 'reminder', channels: ['email', 'sms'], category: 'Courts' },
+  { name: 'Booking Reminder (1h)', type: 'reminder', channels: ['sms'], category: 'Courts' },
+  { name: 'Booking Cancelled', type: 'transactional', channels: ['email'], category: 'Courts' },
+  { name: 'Booking Rescheduled', type: 'transactional', channels: ['email', 'sms'], category: 'Courts' },
+  { name: 'Waitlist Spot Available', type: 'transactional', channels: ['email', 'sms'], category: 'Courts' },
+  { name: 'No-Show Notice', type: 'transactional', channels: ['email'], category: 'Courts' },
+  { name: 'Payment Receipt', type: 'transactional', channels: ['email'], category: 'Billing' },
+  { name: 'Payment Failed', type: 'transactional', channels: ['email', 'sms'], category: 'Billing' },
+  { name: 'Invoice Delivered', type: 'transactional', channels: ['email'], category: 'Billing' },
+  { name: 'Dunning — 1st Notice', type: 'transactional', channels: ['email'], category: 'Billing' },
+  { name: 'Dunning — Final Notice', type: 'transactional', channels: ['email', 'sms'], category: 'Billing' },
+  { name: 'Membership Welcome', type: 'transactional', channels: ['email'], category: 'Customers' },
+  { name: 'Membership Renewal Reminder', type: 'reminder', channels: ['email', 'sms'], category: 'Customers' },
+  { name: 'Membership Frozen', type: 'transactional', channels: ['email'], category: 'Customers' },
+  { name: 'Membership Cancelled', type: 'transactional', channels: ['email'], category: 'Customers' },
+  { name: 'Pass Purchased', type: 'transactional', channels: ['email'], category: 'Customers' },
+  { name: 'Pass Expiring Soon', type: 'reminder', channels: ['email', 'sms'], category: 'Customers' },
+  { name: 'Waiver Renewal Required', type: 'transactional', channels: ['email'], category: 'Customers' },
+  { name: 'Program Enrollment', type: 'transactional', channels: ['email'], category: 'Programs' },
+  { name: 'Program Session Reminder', type: 'reminder', channels: ['email', 'sms'], category: 'Programs' },
+  { name: 'Program Cancelled', type: 'transactional', channels: ['email'], category: 'Programs' },
+  { name: 'League Registration', type: 'transactional', channels: ['email'], category: 'Leagues' },
+  { name: 'Match Reminder', type: 'reminder', channels: ['email', 'sms'], category: 'Leagues' },
+  { name: 'Standings Update', type: 'transactional', channels: ['email'], category: 'Leagues' },
+  { name: 'Check-in Credential', type: 'transactional', channels: ['email', 'sms'], category: 'Access' },
+  { name: 'Operator Weekly Digest', type: 'transactional', channels: ['email'], category: 'Operations' },
+];
+const CUSTOM_TEMPLATES = [
+  { name: 'Spring Promo Email', type: 'marketing', channels: ['email'] },
+  { name: 'Monthly Newsletter', type: 'announcement', channels: ['email'] },
+  { name: 'Win-Back Email', type: 'marketing', channels: ['email'] },
+  { name: 'Holiday Hours Notice', type: 'announcement', channels: ['email', 'sms'] },
+];
+const DELIVERY_ISSUES = [
+  { customer: 'David Wright', email: 'd.wright@email.com', issue: 'hard_bounce' as const, lastAttempt: 'Mar 20, 2026', attempts: 1, flagged: 'Mar 20, 2026' },
+  { customer: 'Expired Domain User', email: 'user@oldcompany.ca', issue: 'hard_bounce' as const, lastAttempt: 'Mar 19, 2026', attempts: 1, flagged: 'Mar 19, 2026' },
+  { customer: 'Kevin Nguyen', email: 'kevin.n@gmail.com', issue: 'soft_bounce' as const, lastAttempt: 'Mar 21, 2026', attempts: 3, flagged: 'Mar 21, 2026' },
+  { customer: 'Maria Santos', phone: '+1 (905) 555-0142', issue: 'sms_undelivered' as const, lastAttempt: 'Mar 20, 2026', attempts: 2, flagged: null as string | null },
 ];
 
 function CommunicationsView() {
   const [tab, setTab] = useState('Message Log');
   const [selectedMsg, setSelectedMsg] = useState<typeof MOCK_MESSAGES[0] | null>(null);
   const [search, setSearch] = useState('');
+  const [channelFilter, setChannelFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [directionFilter, setDirectionFilter] = useState('all');
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeStep, setComposeStep] = useState(1);
+  const [composeAudience, setComposeAudience] = useState('segment');
+  const [composeChannel, setComposeChannel] = useState('email');
+  const [templateCategory, setTemplateCategory] = useState('all');
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
+
+  const filteredMessages = MOCK_MESSAGES.filter(m => {
+    if (search && !m.recipient.toLowerCase().includes(search.toLowerCase()) && !m.subject.toLowerCase().includes(search.toLowerCase())) return false;
+    if (channelFilter !== 'all' && m.channel !== channelFilter) return false;
+    if (typeFilter !== 'all' && m.type !== typeFilter) return false;
+    if (directionFilter !== 'all' && m.direction !== directionFilter) return false;
+    return true;
+  });
+
+  const filteredSystemTemplates = SYSTEM_TEMPLATES.filter(t => templateCategory === 'all' || t.category === templateCategory);
+  const templateCategories = Array.from(new Set(SYSTEM_TEMPLATES.map(t => t.category)));
+
   return (
     <>
-      <SPageHeader title="Communications"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Compose</Button></SPageHeader>
-      <STabBar tabs={['Message Log', 'Campaigns', 'Templates']} active={tab} onChange={setTab} />
+      <SPageHeader title="Communications">
+        {tab === 'Message Log' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Compose</Button>}
+        {tab === 'Campaigns' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Campaign</Button>}
+        {tab === 'Templates' && <Button onClick={() => setEditingTemplate('New Template')} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Template</Button>}
+        {tab === 'Delivery Issues' && <Button variant="outline" className="h-9 text-xs font-bold px-5 btn-outline-modern"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Retry All</Button>}
+      </SPageHeader>
+      <STabBar tabs={['Message Log', 'Campaigns', 'Templates', 'Delivery Issues']} active={tab} onChange={setTab} />
       <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
+
+        {/* ===== MESSAGE LOG ===== */}
         {tab === 'Message Log' && (<>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs font-medium text-blue-700 dark:text-blue-300">
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>Marketing messages respect quiet hours (10 PM &ndash; 8 AM). Transactional messages are sent immediately.</span>
+          </div>
           <SToolbar>
-            <SSearchInput placeholder="Search recipient..." value={search} onChange={setSearch} />
-            <SFilterPill label="All Channels" active={true} onClick={() => {}} />
-            <SFilterPill label="All Types" active={false} onClick={() => {}} />
-            <SFilterPill label="This Week" active={false} onClick={() => {}} />
+            <SSearchInput placeholder="Search recipient or subject..." value={search} onChange={setSearch} />
+            <select value={channelFilter} onChange={e => setChannelFilter(e.target.value)} className="h-8 px-2 text-xs font-semibold text-muted-foreground select-modern">
+              <option value="all">All Channels</option><option value="email">Email</option><option value="sms">SMS</option><option value="voice">Voice</option>
+            </select>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="h-8 px-2 text-xs font-semibold text-muted-foreground select-modern">
+              <option value="all">All Types</option><option value="transactional">Transactional</option><option value="reminder">Reminder</option><option value="marketing">Marketing</option><option value="announcement">Announcement</option>
+            </select>
+            <select value={directionFilter} onChange={e => setDirectionFilter(e.target.value)} className="h-8 px-2 text-xs font-semibold text-muted-foreground select-modern">
+              <option value="all">All Directions</option><option value="inbound">Inbound</option><option value="outbound">Outbound</option>
+            </select>
+            {(channelFilter !== 'all' || typeFilter !== 'all' || directionFilter !== 'all') && <button onClick={() => { setChannelFilter('all'); setTypeFilter('all'); setDirectionFilter('all'); }} className="text-[11px] text-primary font-semibold hover:underline">Clear</button>}
           </SToolbar>
           <div className="card-elevated rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead><tr className="border-b border-border">
-                {['Date', 'Recipient', 'Channel', 'Type', 'Subject', 'Status', 'Sent By'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
+                {['Date', '', 'Recipient', 'Channel', 'Type', 'Subject', 'Status', 'Consent', 'Source', 'Related'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 md:px-4 py-2.5 bg-card sticky top-0 z-10 whitespace-nowrap">{h}</th>)}
               </tr></thead>
-              <tbody>{MOCK_MESSAGES.filter(m => !search || m.recipient.toLowerCase().includes(search.toLowerCase())).map(msg => (
-                <tr key={msg.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedMsg(msg)}>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{msg.date}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium">{msg.recipient}</td>
-                  <td className="px-4 py-2.5"><StatusBadge status={msg.channel} /></td>
-                  <td className="px-4 py-2.5"><StatusBadge status={msg.type} /></td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium max-w-56 truncate">{msg.subject}</td>
-                  <td className="px-4 py-2.5"><StatusBadge status={msg.status} /></td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{msg.triggeredBy}</td>
+              <tbody>{filteredMessages.map(msg => (
+                <tr key={msg.id} className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${selectedMsg?.id === msg.id ? 'bg-primary/5' : ''}`} onClick={() => setSelectedMsg(msg)}>
+                  <td className="px-3 md:px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{msg.date}</td>
+                  <td className="px-1 py-2.5">{msg.direction === 'inbound' ? <span className="text-[9px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded">IN</span> : <span className="text-[9px] font-bold text-muted-foreground bg-muted px-1 py-0.5 rounded">OUT</span>}</td>
+                  <td className="px-3 md:px-4 py-2.5 text-sm font-medium">{msg.recipient}</td>
+                  <td className="px-3 md:px-4 py-2.5"><StatusBadge status={msg.channel} /></td>
+                  <td className="px-3 md:px-4 py-2.5"><StatusBadge status={msg.type} /></td>
+                  <td className="px-3 md:px-4 py-2.5 text-xs text-muted-foreground font-medium max-w-56 truncate">{msg.subject}</td>
+                  <td className="px-3 md:px-4 py-2.5"><StatusBadge status={msg.status} /></td>
+                  <td className="px-3 md:px-4 py-2.5 text-center">{msg.type === 'marketing' || msg.type === 'announcement' ? (msg.status !== 'bounced' ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 inline" /> : <Minus className="w-3.5 h-3.5 text-muted-foreground inline" />) : <Minus className="w-3.5 h-3.5 text-muted-foreground inline" />}</td>
+                  <td className="px-3 md:px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{msg.triggeredBy}</td>
+                  <td className="px-3 md:px-4 py-2.5 text-xs text-primary font-medium whitespace-nowrap">{msg.relatedEntity && <span className="hover:underline cursor-pointer">{msg.relatedEntity}</span>}</td>
                 </tr>
               ))}</tbody>
             </table>
+            {filteredMessages.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">No messages match your filters.</div>}
           </div>
         </>)}
+
+        {/* ===== CAMPAIGNS ===== */}
         {tab === 'Campaigns' && (
           <div className="space-y-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-xs font-medium text-blue-700 dark:text-blue-300">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span>Marketing messages respect quiet hours (10 PM &ndash; 8 AM). Scheduled sends during quiet hours will be held until 8 AM.</span>
+            </div>
             {MOCK_CAMPAIGNS.map(camp => (
               <div key={camp.id} className="card-elevated rounded-lg p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between flex-wrap gap-2">
                   <div>
-                    <div className="flex items-center gap-2"><h3 className="text-sm font-bold">{camp.name}</h3><StatusBadge status={camp.type} /><StatusBadge status={camp.status} /></div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground font-medium">
+                    <div className="flex items-center gap-2 flex-wrap"><h3 className="text-sm font-bold">{camp.name}</h3><StatusBadge status={camp.type} /><StatusBadge status={camp.status} />{camp.promo && <Badge variant="outline" className="text-[9px] font-bold">🏷 {camp.promo}</Badge>}</div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground font-medium flex-wrap">
                       <span><Users className="w-3 h-3 inline mr-1" />{camp.audience} recipients</span>
                       <span><Mail className="w-3 h-3 inline mr-1" />{camp.channel}</span>
                       {camp.sendDate && <span><Calendar className="w-3 h-3 inline mr-1" />{camp.sendDate}</span>}
+                      {camp.segment && <span><Tag className="w-3 h-3 inline mr-1" />{camp.segment}</span>}
                     </div>
+                    {camp.type === 'marketing' && <div className="mt-1 text-[10px] text-muted-foreground font-medium flex items-center gap-1"><Shield className="w-3 h-3 text-amber-500" />{Math.round(camp.audience * 0.08)} customers excluded (no marketing consent)</div>}
                   </div>
                   <div className="flex gap-2">
+                    {camp.status === 'draft' && <Button className="h-7 text-[10px] font-bold px-3 btn-primary-modern">Continue Editing</Button>}
+                    {camp.status === 'scheduled' && <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern text-destructive">Cancel</Button>}
                     <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">View</Button>
-                    <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">Edit</Button>
-                    <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">Duplicate</Button>
+                    {camp.status !== 'cancelled' && <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">Duplicate</Button>}
                   </div>
                 </div>
-                {camp.delivered && (
-                  <div className="flex gap-6 mt-3 pt-3 border-t border-border">
+                {camp.delivered !== undefined && (
+                  <div className="flex gap-4 md:gap-6 mt-3 pt-3 border-t border-border flex-wrap">
                     <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Delivered</div><div className="text-sm font-bold">{camp.delivered}</div></div>
-                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Opened</div><div className="text-sm font-bold">{camp.opened} <span className="text-xs text-muted-foreground font-medium">({Math.round((camp.opened! / camp.delivered) * 100)}%)</span></div></div>
-                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Clicked</div><div className="text-sm font-bold">{camp.clicked} <span className="text-xs text-muted-foreground font-medium">({Math.round((camp.clicked! / camp.delivered) * 100)}%)</span></div></div>
+                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Opened</div><div className="text-sm font-bold">{camp.opened} <span className="text-xs text-muted-foreground font-medium">({camp.delivered ? Math.round((camp.opened! / camp.delivered) * 100) : 0}%)</span></div></div>
+                    <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Clicked</div><div className="text-sm font-bold">{camp.clicked} <span className="text-xs text-muted-foreground font-medium">({camp.delivered ? Math.round((camp.clicked! / camp.delivered) * 100) : 0}%)</span></div></div>
+                    {camp.bounced !== undefined && camp.bounced > 0 && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Bounced</div><div className="text-sm font-bold text-destructive">{camp.bounced}</div></div>}
+                    {camp.unsubscribed !== undefined && camp.unsubscribed > 0 && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Unsubscribed</div><div className="text-sm font-bold text-warning-foreground">{camp.unsubscribed}</div></div>}
                   </div>
                 )}
               </div>
             ))}
           </div>
         )}
+
+        {/* ===== TEMPLATES ===== */}
         {tab === 'Templates' && (<>
           <div>
-            <h3 className="text-sm font-bold mb-3">System Templates</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {['Booking Confirmed', 'Booking Reminder (24h)', 'Booking Cancelled', 'Payment Receipt', 'Membership Welcome', 'Waitlist Spot Available'].map(name => (
-                <div key={name} className="card-elevated rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between"><h4 className="text-sm font-medium">{name}</h4><Badge variant="secondary" className="text-[9px]">System</Badge></div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium"><StatusBadge status="transactional" /><StatusBadge status="email" /></div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold">System Templates ({filteredSystemTemplates.length})</h3>
+              <div className="flex items-center gap-1 border border-border rounded-md overflow-hidden">
+                {['all', ...templateCategories].map((cat, ci) => (
+                  <button key={cat} onClick={() => setTemplateCategory(cat)}
+                    className={`px-2.5 py-1 text-[10px] font-bold transition-colors ${ci > 0 ? 'border-l border-border' : ''}
+                      ${templateCategory === cat ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                    {cat === 'all' ? 'All' : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {filteredSystemTemplates.map(tmpl => (
+                <div key={tmpl.name} className="card-elevated rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2"><h4 className="text-sm font-medium truncate">{tmpl.name}</h4><Badge variant="secondary" className="text-[9px] shrink-0">{tmpl.category}</Badge></div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <StatusBadge status={tmpl.type} />
+                    {tmpl.channels.map(ch => <StatusBadge key={ch} status={ch} />)}
+                  </div>
                   <Button variant="outline" className="w-full h-7 text-[10px] font-bold btn-outline-modern"><Eye className="w-3 h-3 mr-1" />Preview</Button>
                 </div>
               ))}
@@ -3982,44 +5600,132 @@ function CommunicationsView() {
           </div>
           <div className="h-px bg-border" />
           <div>
-            <h3 className="text-sm font-bold mb-3">Custom Templates</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {[{ name: 'Spring Promo Email', type: 'marketing' }, { name: 'Monthly Newsletter', type: 'announcement' }].map(tmpl => (
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold">Custom Templates ({CUSTOM_TEMPLATES.length})</h3>
+              <Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern"><Plus className="w-3 h-3 mr-1" />New Template</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {CUSTOM_TEMPLATES.map(tmpl => (
                 <div key={tmpl.name} className="card-elevated rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between"><h4 className="text-sm font-medium">{tmpl.name}</h4><Badge variant="secondary" className="text-[9px]">Custom</Badge></div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium"><StatusBadge status={tmpl.type} /><StatusBadge status="email" /></div>
+                  <div className="flex items-center justify-between gap-2"><h4 className="text-sm font-medium truncate">{tmpl.name}</h4><Badge variant="secondary" className="text-[9px] shrink-0">Custom</Badge></div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <StatusBadge status={tmpl.type} />
+                    {tmpl.channels.map(ch => <StatusBadge key={ch} status={ch} />)}
+                  </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern"><Eye className="w-3 h-3 mr-1" />Preview</Button>
-                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                    <Button variant="outline" className="flex-1 h-7 text-[10px] font-bold btn-outline-modern" onClick={() => setEditingTemplate(tmpl.name)}><Pencil className="w-3 h-3 mr-1" />Edit</Button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+          {/* Template Editor Modal */}
+          {editingTemplate && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditingTemplate(null)}>
+              <div className="w-full max-w-2xl bg-card rounded-xl shadow-xl border" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-6 py-4 border-b"><h3 className="text-base font-bold">Edit Template: {editingTemplate}</h3><button onClick={() => setEditingTemplate(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button></div>
+                <div className="p-6 space-y-4">
+                  <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Template Name</label><input className="w-full h-9 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue={editingTemplate} /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Type</label><select className="w-full h-9 px-3 text-sm font-medium select-modern"><option>Marketing</option><option>Announcement</option></select></div>
+                    <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Channels</label><select className="w-full h-9 px-3 text-sm font-medium select-modern"><option>Email</option><option>SMS</option><option>Email + SMS</option></select></div>
+                  </div>
+                  <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Subject Line</label><input className="w-full h-9 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="Spring Special — 20% Off All Bookings This Weekend!" /></div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Email Body</label>
+                      <div className="flex gap-1">
+                        {['{{first_name}}', '{{facility_name}}', '{{promo_code}}', '{{booking_link}}'].map(field => (
+                          <button key={field} className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded hover:bg-primary/20">{field}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-full h-40 px-3 py-2 text-sm border border-border rounded-md bg-background font-medium text-muted-foreground">
+                      <p>Hi {'{{first_name}}'},</p><br />
+                      <p>Spring is here and we have a special offer just for you! Use code <strong>{'{{promo_code}}'}</strong> at checkout to get 20% off your next booking at {'{{facility_name}}'}.</p><br />
+                      <p>Book now → {'{{booking_link}}'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                  <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern"><Send className="w-3.5 h-3.5 mr-1.5" />Send Test</Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => setEditingTemplate(null)}>Cancel</Button>
+                    <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setEditingTemplate(null)}>Save Template</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>)}
+
+        {/* ===== DELIVERY ISSUES ===== */}
+        {tab === 'Delivery Issues' && (<>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <SMetricCard label="Hard Bounces" value="2" trend="Flagged — needs attention" />
+            <SMetricCard label="Soft Bounces" value="1" trend="3 attempts in 30 days" />
+            <SMetricCard label="SMS Undelivered" value="1" trend="2 attempts" />
+            <SMetricCard label="Total Flagged" value="4" trend="Review and resolve" />
+          </div>
+          <div className="card-elevated rounded-lg overflow-x-auto">
+            <div className="px-4 py-3 border-b"><h3 className="text-sm font-bold">Flagged Contacts</h3></div>
+            <table className="w-full">
+              <thead><tr className="border-b border-border">
+                {['Customer', 'Contact', 'Issue', 'Last Attempt', 'Attempts', 'Flagged', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+              </tr></thead>
+              <tbody>{DELIVERY_ISSUES.map((di, i) => (
+                <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="px-4 py-2.5 text-sm font-medium">{di.customer}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{di.email || di.phone}</td>
+                  <td className="px-4 py-2.5">
+                    {di.issue === 'hard_bounce' && <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] py-0">Hard Bounce</Badge>}
+                    {di.issue === 'soft_bounce' && <Badge className="bg-warning/10 text-warning-foreground border-warning/20 text-[10px] py-0">Soft Bounce</Badge>}
+                    {di.issue === 'sms_undelivered' && <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-[10px] py-0">SMS Undelivered</Badge>}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{di.lastAttempt}</td>
+                  <td className="px-4 py-2.5 text-xs font-medium">{di.attempts}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{di.flagged || '—'}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex gap-1.5">
+                      <Button variant="outline" className="h-6 text-[9px] font-bold px-2 btn-outline-modern">Update Contact</Button>
+                      <Button variant="outline" className="h-6 text-[9px] font-bold px-2 btn-outline-modern">Retry</Button>
+                      <Button variant="outline" className="h-6 text-[9px] font-bold px-2 btn-outline-modern text-destructive">Mark DNC</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
         </>)}
       </div>
-      {/* Message Detail Panel — inline */}
-      {selectedMsg && (
-        <div className="w-[340px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+
+      {/* Message Detail Panel */}
+      {selectedMsg && tab === 'Message Log' && (
+        <div className="w-full md:w-[380px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
             <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
               <h3 className="text-sm font-bold">Message Details</h3>
               <button onClick={() => setSelectedMsg(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-5 space-y-4">
-              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Recipient</div><div className="text-sm font-bold mt-1">{selectedMsg.recipient}</div></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Channel</div><StatusBadge status={selectedMsg.channel} className="mt-1" /></div>
-                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Type</div><StatusBadge status={selectedMsg.type} className="mt-1" /></div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                {selectedMsg.direction === 'inbound' ? <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">INBOUND</span> : <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">OUTBOUND</span>}
+                <StatusBadge status={selectedMsg.channel} />
+                <StatusBadge status={selectedMsg.type} />
               </div>
-              <div className="h-px bg-border" />
+              <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Recipient</div><div className="text-sm font-bold mt-1">{selectedMsg.recipient}</div></div>
               <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Subject</div><div className="text-sm font-medium mt-1">{selectedMsg.subject}</div></div>
+              <div className="h-px bg-border" />
+              {selectedMsg.template && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Template</div><div className="text-sm font-medium mt-1 text-primary">{selectedMsg.template}</div></div>}
+              {selectedMsg.campaign && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Campaign</div><div className="text-sm font-medium mt-1 text-primary">{selectedMsg.campaign}</div></div>}
+              {selectedMsg.relatedEntity && <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Related</div><div className="text-sm font-medium mt-1 text-primary">{selectedMsg.relatedEntity}</div></div>}
               <div className="h-px bg-border" />
               <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Delivery Timeline</div>
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="text-xs font-medium">Sent</span><span className="text-[10px] text-muted-foreground ml-auto">{selectedMsg.date}</span></div>
                   {['delivered', 'opened'].includes(selectedMsg.status) && <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /><span className="text-xs font-medium">Delivered</span></div>}
                   {selectedMsg.status === 'opened' && <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="text-xs font-medium">Opened</span></div>}
-                  {selectedMsg.status === 'bounced' && <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500" /><span className="text-xs font-medium">Bounced</span></div>}
+                  {selectedMsg.status === 'bounced' && <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500" /><span className="text-xs font-medium">Bounced — Hard bounce</span></div>}
                 </div>
               </div>
               <div className="h-px bg-border" />
@@ -4028,6 +5734,161 @@ function CommunicationsView() {
         </div>
       )}
       </div>
+
+      {/* ===== COMPOSE WIZARD MODAL ===== */}
+      {composeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setComposeOpen(false)}>
+          <div className="w-full max-w-2xl bg-card rounded-xl shadow-xl border max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+              <div className="flex items-center gap-3">
+                <h3 className="text-base font-bold">Compose Message</h3>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <div key={s} className={`h-1.5 w-8 rounded-full ${s <= composeStep ? 'bg-primary' : 'bg-border'}`} />
+                  ))}
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Step {composeStep} of 5</span>
+              </div>
+              <button onClick={() => setComposeOpen(false)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Step 1: Audience */}
+              {composeStep === 1 && (<>
+                <h4 className="text-sm font-bold">Select Audience</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { id: 'segment', label: 'Saved Segment', desc: 'Use a predefined audience', icon: Users },
+                    { id: 'individual', label: 'Individual', desc: 'Send to one customer', icon: UserCog },
+                    { id: 'program', label: 'Program Roster', desc: 'All enrolled in a program', icon: GraduationCap },
+                    { id: 'league', label: 'League Participants', desc: 'All in a league/team', icon: Trophy },
+                    { id: 'all', label: 'All Customers', desc: 'Broadcast to everyone', icon: Users },
+                    { id: 'staff', label: 'Staff Only', desc: 'Internal communication', icon: UserCog },
+                  ].map(opt => (
+                    <button key={opt.id} onClick={() => setComposeAudience(opt.id)}
+                      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors text-left ${composeAudience === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+                      <opt.icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div><div className="text-sm font-semibold">{opt.label}</div><div className="text-[11px] text-muted-foreground">{opt.desc}</div></div>
+                    </button>
+                  ))}
+                </div>
+                {composeAudience === 'segment' && (
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Audience Builder</h4>
+                    <div className="space-y-2">
+                      {[
+                        { label: 'Tag', value: 'has tag: pickleball-regular' },
+                        { label: 'Membership', value: 'is: Gold or Silver' },
+                        { label: 'Last Booking', value: 'within last 30 days' },
+                      ].map((filter, fi) => (
+                        <div key={fi} className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
+                          <Badge variant="outline" className="text-[9px] font-bold shrink-0">{filter.label}</Badge>
+                          <span className="text-xs font-medium flex-1">{filter.value}</span>
+                          <button className="text-muted-foreground hover:text-foreground"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                      <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><Plus className="w-3 h-3" />Add Filter</button>
+                    </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/5 border border-primary/20">
+                      <Users className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold">89 customers match</span>
+                      <span className="text-xs text-muted-foreground ml-auto">7 excluded (CASL)</span>
+                    </div>
+                  </div>
+                )}
+              </>)}
+              {/* Step 2: Channel */}
+              {composeStep === 2 && (<>
+                <h4 className="text-sm font-bold">Select Channel</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[
+                    { id: 'email', label: 'Email', desc: 'Rich HTML with tracking' },
+                    { id: 'sms', label: 'SMS', desc: 'Plain text, 160 chars' },
+                    { id: 'both', label: 'Email + SMS', desc: 'Reach on both channels' },
+                  ].map(ch => (
+                    <button key={ch.id} onClick={() => setComposeChannel(ch.id)}
+                      className={`p-4 rounded-lg border text-center transition-colors ${composeChannel === ch.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+                      <div className="text-sm font-bold">{ch.label}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{ch.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </>)}
+              {/* Step 3: Content */}
+              {composeStep === 3 && (<>
+                <h4 className="text-sm font-bold">Compose Content</h4>
+                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Template (optional)</label>
+                  <select className="w-full h-9 px-3 text-sm font-medium select-modern"><option value="">Start from scratch</option>{CUSTOM_TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}</select>
+                </div>
+                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Subject Line</label><input className="w-full h-9 px-3 text-sm font-medium border border-border rounded-md bg-background" placeholder="Enter subject..." /></div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Body</label>
+                    <div className="flex gap-1">
+                      {['{{first_name}}', '{{facility_name}}', '{{promo_code}}'].map(f => <button key={f} className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded hover:bg-primary/20">{f}</button>)}
+                    </div>
+                  </div>
+                  <textarea className="w-full h-32 px-3 py-2 text-sm border border-border rounded-md bg-background font-medium resize-none" placeholder="Write your message..." />
+                </div>
+                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Promo Code (optional)</label>
+                  <select className="w-full h-9 px-3 text-sm font-medium select-modern"><option value="">None</option><option>SPRING20 — 20% off all bookings</option><option>COMEBACK15 — 15% off returning customers</option></select>
+                </div>
+              </>)}
+              {/* Step 4: Send Options */}
+              {composeStep === 4 && (<>
+                <h4 className="text-sm font-bold">Send Options</h4>
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                    <input type="radio" name="send" defaultChecked className="mt-1" />
+                    <div><div className="text-sm font-semibold">Send Now</div><div className="text-[11px] text-muted-foreground">Message will be sent immediately</div></div>
+                  </label>
+                  <label className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                    <input type="radio" name="send" className="mt-1" />
+                    <div>
+                      <div className="text-sm font-semibold">Schedule for Later</div>
+                      <div className="text-[11px] text-muted-foreground">Pick a date and time</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <input type="date" className="h-8 px-2 text-xs border border-border rounded-md bg-background" defaultValue="2026-03-22" />
+                        <input type="time" className="h-8 px-2 text-xs border border-border rounded-md bg-background" defaultValue="10:00" />
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </>)}
+              {/* Step 5: Review */}
+              {composeStep === 5 && (<>
+                <h4 className="text-sm font-bold">Review & Confirm</h4>
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg border border-border space-y-2">
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Audience</span><span className="text-sm font-semibold">Saved Segment — 89 customers</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">CASL Excluded</span><span className="text-sm font-semibold text-warning-foreground">7 customers</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Will Receive</span><span className="text-sm font-bold text-primary">82 customers</span></div>
+                  </div>
+                  <div className="p-3 rounded-lg border border-border space-y-2">
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Channel</span><span className="text-sm font-semibold">Email</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Subject</span><span className="text-sm font-semibold">Spring Special — 20% Off</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Promo Code</span><span className="text-sm font-semibold">SPRING20</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-muted-foreground font-medium">Send</span><span className="text-sm font-semibold">Now</span></div>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-warning-foreground mt-0.5 shrink-0" />
+                  <div className="text-xs text-warning-foreground font-medium">This will send 82 marketing emails. Customers without express CASL consent have been excluded. This action cannot be undone.</div>
+                </div>
+              </>)}
+            </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t shrink-0">
+              <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern" onClick={() => composeStep > 1 ? setComposeStep(composeStep - 1) : setComposeOpen(false)}>
+                {composeStep === 1 ? 'Cancel' : '← Back'}
+              </Button>
+              {composeStep < 5 ? (
+                <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setComposeStep(composeStep + 1)}>Next →</Button>
+              ) : (
+                <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setComposeOpen(false)}><Send className="w-3.5 h-3.5 mr-1.5" />Send Campaign</Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -4038,6 +5899,8 @@ function CommunicationsView() {
 function AccessView() {
   const [tab, setTab] = useState("Today's Activity");
   const [search, setSearch] = useState('');
+  const [eventFilter, setEventFilter] = useState<'all' | 'check-in' | 'denied' | 'no-show'>('all');
+  const [methodFilter, setMethodFilter] = useState<'all' | 'front_desk' | 'door_code' | 'qr'>('all');
   const arrivals = [
     { id: 'A01', customer: 'Jane Doe', bookingTime: '2:00 PM', court: 'Court 1', sport: 'Pickleball', credentialSent: true, checkedIn: true, checkInTime: '1:52 PM', method: 'Front Desk' },
     { id: 'A02', customer: 'Tom Kim', bookingTime: '2:00 PM', court: 'Court 5', sport: 'Tennis', credentialSent: true, checkedIn: true, checkInTime: '1:58 PM', method: 'Door Code' },
@@ -4070,9 +5933,9 @@ function AccessView() {
     <>
       <SPageHeader title="Access & Check-in"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Manual Check-in</Button></SPageHeader>
       <STabBar tabs={["Today's Activity", 'Access Log']} active={tab} onChange={setTab} />
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {tab === "Today's Activity" && (<>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SMetricCard label="Expected Arrivals" value={`${arrivals.length}`} />
             <SMetricCard label="Checked In" value={`${checkedInCount}`} />
             <SMetricCard label="Currently Here" value={`${checkedInCount}`} />
@@ -4081,20 +5944,57 @@ function AccessView() {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800"><AlertCircle className="w-4 h-4 text-orange-600 shrink-0" /><span className="text-sm font-medium text-orange-800 dark:text-orange-200">1 no-show candidate — Alex Martin (booking at 1:00 PM, not checked in)</span></div>
             <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"><AlertTriangle className="w-4 h-4 text-yellow-600 shrink-0" /><span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">1 expired waiver — David Wright</span></div>
           </div>
+          {/* Currently Here */}
+          <div className="card-elevated rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-border"><h3 className="text-sm font-bold">Currently Here</h3></div>
+            <div className="divide-y divide-border/50">
+              {arrivals.filter(a => a.checkedIn).map(a => (
+                <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+                  <span className="text-sm font-medium flex-1">{a.customer}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{a.court} — {a.sport}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{a.bookingTime}</span>
+                </div>
+              ))}
+              {arrivals.filter(a => a.checkedIn).length === 0 && (
+                <div className="px-4 py-6 text-center text-xs text-muted-foreground font-medium">No customers currently on-site</div>
+              )}
+            </div>
+          </div>
+          {/* Expected Arrivals (not yet checked in) */}
           <div className="card-elevated rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-border"><h3 className="text-sm font-bold">Expected Arrivals</h3></div>
             <table className="w-full">
               <thead><tr className="border-b border-border">
                 {['Customer', 'Time', 'Court', 'Sport', 'Credential', ''].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
               </tr></thead>
-              <tbody>{arrivals.map(a => (
-                <tr key={a.id} className={`border-b border-border/50 hover:bg-muted/30 ${a.checkedIn ? 'opacity-50' : ''}`}>
+              <tbody>{arrivals.filter(a => !a.checkedIn).map(a => (
+                <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="px-4 py-2.5 text-sm font-medium">{a.customer}</td>
                   <td className="px-4 py-2.5 text-sm font-medium">{a.bookingTime}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{a.court}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{a.sport}</td>
                   <td className="px-4 py-2.5">{a.credentialSent ? <StatusBadge status="sent" /> : <StatusBadge status="pending" />}</td>
-                  <td className="px-4 py-2.5">{a.checkedIn ? <span className="text-xs font-bold text-green-600">Checked In {a.checkInTime}</span> : <Button className="h-7 text-[10px] font-bold px-3 btn-primary-modern">Check In</Button>}</td>
+                  <td className="px-4 py-2.5"><Button className="h-7 text-[10px] font-bold px-3 btn-primary-modern">Check In</Button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          {/* Checked In */}
+          <div className="card-elevated rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-border"><h3 className="text-sm font-bold">Checked In</h3></div>
+            <table className="w-full">
+              <thead><tr className="border-b border-border">
+                {['Customer', 'Booking Time', 'Court', 'Sport', 'Check-in Time', 'Method'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+              </tr></thead>
+              <tbody>{arrivals.filter(a => a.checkedIn).map(a => (
+                <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="px-4 py-2.5 text-sm font-medium">{a.customer}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium">{a.bookingTime}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{a.court}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">{a.sport}</td>
+                  <td className="px-4 py-2.5 text-xs font-bold text-green-600">{a.checkInTime}</td>
+                  <td className="px-4 py-2.5"><StatusBadge status={a.method?.toLowerCase().replace(/ /g, '_') || ''} /></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -4103,17 +6003,23 @@ function AccessView() {
         {tab === 'Access Log' && (<>
           <SToolbar>
             <SSearchInput placeholder="Search by customer..." value={search} onChange={setSearch} />
-            <SFilterPill label="All Events" active={true} onClick={() => {}} />
-            <SFilterPill label="All Methods" active={false} onClick={() => {}} />
-            <div className="flex-1" />
-            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export CSV</Button>
+            <SFilterPill label="All Events" active={eventFilter === 'all'} onClick={() => setEventFilter('all')} />
+            <SFilterPill label="Check-in" active={eventFilter === 'check-in'} onClick={() => setEventFilter(eventFilter === 'check-in' ? 'all' : 'check-in')} />
+            <SFilterPill label="Denied" active={eventFilter === 'denied'} onClick={() => setEventFilter(eventFilter === 'denied' ? 'all' : 'denied')} />
+            <SFilterPill label="No-show" active={eventFilter === 'no-show'} onClick={() => setEventFilter(eventFilter === 'no-show' ? 'all' : 'no-show')} />
+            <div className="w-px h-5 bg-border" />
+            <SFilterPill label="All Methods" active={methodFilter === 'all'} onClick={() => setMethodFilter('all')} />
+            <SFilterPill label="Front Desk" active={methodFilter === 'front_desk'} onClick={() => setMethodFilter(methodFilter === 'front_desk' ? 'all' : 'front_desk')} />
+            <SFilterPill label="Door Code" active={methodFilter === 'door_code'} onClick={() => setMethodFilter(methodFilter === 'door_code' ? 'all' : 'door_code')} />
+            <SFilterPill label="QR" active={methodFilter === 'qr'} onClick={() => setMethodFilter(methodFilter === 'qr' ? 'all' : 'qr')} />
+            <div className="flex-1" />            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export CSV</Button>
           </SToolbar>
           <div className="card-elevated rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead><tr className="border-b border-border">
                 {['Date/Time', 'Customer', 'Event', 'Method', 'Details'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
               </tr></thead>
-              <tbody>{accessLog.filter(e => !search || e.customer.toLowerCase().includes(search.toLowerCase())).map(evt => (
+              <tbody>{accessLog.filter(e => (!search || e.customer.toLowerCase().includes(search.toLowerCase())) && (eventFilter === 'all' || e.eventType === eventFilter) && (methodFilter === 'all' || e.method === methodFilter)).map(evt => (
                 <tr key={evt.id} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium whitespace-nowrap">{evt.date}</td>
                   <td className="px-4 py-2.5 text-sm font-medium">{evt.customer}</td>
@@ -4233,13 +6139,13 @@ function ReportsView() {
     const cat = REPORT_CATEGORIES.find(c => c.id === activeReport!.catId);
     return (
       <>
-        <div className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0">
+        <div className="h-11 flex items-center justify-between px-5 bg-card/50 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
-            <button onClick={() => setActiveReport(null)} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />Reports</button>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">{cat?.name}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <h1 className="text-base font-bold">{activeReport!.reportName}</h1>
+            <button onClick={() => setActiveReport(null)} className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="w-3.5 h-3.5" />Reports</button>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[13px] font-medium text-muted-foreground">{cat?.name}</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[13px] font-bold">{activeReport!.reportName}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Calendar className="w-3 h-3 mr-1.5" />Schedule</Button>
@@ -4251,7 +6157,7 @@ function ReportsView() {
           {filters}
           <div className="flex-1" />
         </SToolbar>
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">{children}</div>
       </>
     );
   };
@@ -4319,7 +6225,7 @@ function ReportsView() {
       const avgUtil = Math.round(courtUtil.reduce((s, c) => s + c.util, 0) / courtUtil.length * 10) / 10;
       return (
         <ReportShell filters={<><SFilterPill label="All Courts" active={true} onClick={() => {}} /><SFilterPill label="All Sports" active={false} onClick={() => {}} /></>}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SMetricCard label="Avg Utilization" value={`${avgUtil}%`} trend="↑ 3pp vs last month" trendUp={true} />
             <SMetricCard label="Total Booked Hours" value={`${courtUtil.reduce((s, c) => s + c.bookedHrs, 0).toLocaleString()}`} trend="↑ 8%" trendUp={true} />
             <SMetricCard label="Revenue per Court Hour" value={`$${(courtUtil.reduce((s, c) => s + c.revenue, 0) / courtUtil.reduce((s, c) => s + c.bookedHrs, 0)).toFixed(2)}`} />
@@ -4384,7 +6290,7 @@ function ReportsView() {
       ];
       return (
         <ReportShell filters={<><SFilterPill label="All Segments" active={true} onClick={() => {}} /><SFilterPill label="All Sports" active={false} onClick={() => {}} /></>}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SMetricCard label="Active Customers" value="186" trend="↑ 11% vs 3 months ago" trendUp={true} />
             <SMetricCard label="Retention Rate" value="93.7%" trend="↑ 2.1pp vs last month" trendUp={true} />
             <SMetricCard label="New This Month" value="38" trend="↑ 12% vs last month" trendUp={true} />
@@ -4447,7 +6353,7 @@ function ReportsView() {
       ];
       return (
         <ReportShell filters={<><SFilterPill label="All Types" active={true} onClick={() => {}} /><SFilterPill label="All Sports" active={false} onClick={() => {}} /><SFilterPill label="Active Only" active={false} onClick={() => {}} /></>}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SMetricCard label="Active Programs" value="6" />
             <SMetricCard label="Total Enrolled" value="78" trend="↑ 12 vs last month" trendUp={true} />
             <SMetricCard label="Avg Fill Rate" value="69%" trend="↑ 5pp" trendUp={true} />
@@ -4523,7 +6429,7 @@ function ReportsView() {
       ];
       return (
         <ReportShell filters={<><SFilterPill label="All Staff" active={true} onClick={() => {}} /><SFilterPill label="All Actions" active={false} onClick={() => {}} /></>}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SMetricCard label="Actions Today" value="42" trend="↑ 8 vs yesterday" trendUp={true} />
             <SMetricCard label="Active Staff" value="5" />
             <SMetricCard label="Most Active" value="Jessica Wong" trend="18 actions today" />
@@ -4567,7 +6473,7 @@ function ReportsView() {
       const waiverColors: Record<string, string> = { current: 'bg-green-100 text-green-700', expiring_soon: 'bg-yellow-100 text-yellow-700', expired: 'bg-red-100 text-red-700', unsigned: 'bg-gray-100 text-gray-600' };
       return (
         <ReportShell filters={<><SFilterPill label="All Status" active={true} onClick={() => {}} /><SFilterPill label="Upcoming Bookings Only" active={false} onClick={() => {}} /></>}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SMetricCard label="Current Waivers" value={`${waiverData.filter(w => w.status === 'current').length}`} />
             <SMetricCard label="Expiring Soon" value={`${waiverData.filter(w => w.status === 'expiring_soon').length}`} trend="Within 30 days" trendUp={false} />
             <SMetricCard label="Expired" value={`${waiverData.filter(w => w.status === 'expired').length}`} trend="Needs attention" trendUp={false} />
@@ -4625,7 +6531,7 @@ function ReportsView() {
         <SDateRangePicker value={dateRange} onChange={setDateRange} />
         <Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern"><Download className="w-3.5 h-3.5 mr-1.5" />Export</Button>
       </SPageHeader>
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-6 gap-3">
           <SMetricCard label="Revenue" value="$48,650" trend="↑ 8% vs last month" trendUp={true} />
@@ -4637,7 +6543,7 @@ function ReportsView() {
         </div>
 
         {/* Quick Charts */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Revenue Trend */}
           <div className="card-elevated rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all" onClick={() => setActiveReport({ catId: 'financial', reportId: 'revenue-summary', reportName: 'Revenue Summary' })}>
             <div className="flex items-center justify-between mb-3">
@@ -4779,28 +6685,29 @@ function ReportsView() {
 // AI DASHBOARD VIEW
 // ============================================================
 const MOCK_CALLS = [
-  { id: 'CL01', date: 'Mar 21, 2:05 PM', caller: 'John Smith', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '1:05', disposition: 'booked' as const, sentiment: 'positive' as const, revenue: 45, summary: 'Called to book a pickleball court for Saturday at 2pm. AI checked availability, quoted $45/hour with member discount, created booking for Court 3.' },
-  { id: 'CL02', date: 'Mar 21, 1:30 PM', caller: 'Unknown (+1 647-555-1234)', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:42', disposition: 'answered_question' as const, sentiment: 'neutral' as const, summary: 'Asked about facility hours and pickleball court availability this weekend. AI provided operating hours and directed to online booking.' },
-  { id: 'CL03', date: 'Mar 21, 12:00 PM', caller: 'Lisa Park', direction: 'outbound' as const, agent: 'Payment Failure', duration: '0:55', disposition: 'left_message' as const, sentiment: 'neutral' as const, summary: 'Outbound call regarding failed Gold Membership payment. Customer did not answer. Left voicemail with payment update instructions.' },
-  { id: 'CL04', date: 'Mar 21, 11:15 AM', caller: 'Emma Singh', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '2:10', disposition: 'booked' as const, sentiment: 'positive' as const, revenue: 90, summary: 'Wanted to book 2 hours of pickleball for a group. AI booked Court 2 for 2 hours, sent payment link for $90.' },
-  { id: 'CL05', date: 'Mar 21, 10:30 AM', caller: 'Mike Russo', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:38', disposition: 'transferred' as const, sentiment: 'neutral' as const, summary: 'Called about corporate account billing question. AI could not resolve, transferred to front desk.' },
-  { id: 'CL06', date: 'Mar 20, 8:00 PM', caller: 'Unknown (+1 905-555-9876)', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:15', disposition: 'abandoned' as const, sentiment: 'negative' as const, summary: 'Caller hung up after 15 seconds. AI greeted but caller disconnected immediately.' },
-  { id: 'CL07', date: 'Mar 20, 6:30 PM', caller: 'Brandon Fisher', direction: 'outbound' as const, agent: 'Booking Reminder', duration: '0:22', disposition: 'booked' as const, sentiment: 'positive' as const, summary: 'Reminder call for tomorrow morning tennis booking. Customer confirmed attendance.' },
-  { id: 'CL08', date: 'Mar 20, 5:00 PM', caller: 'Rachel Gomez', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '1:30', disposition: 'booked' as const, sentiment: 'positive' as const, revenue: 45, summary: 'Called to cancel Thursday booking and rebook for Friday. AI processed cancellation, issued account credit, and created new booking.' },
-  { id: 'CL09', date: 'Mar 20, 3:15 PM', caller: 'Walk-in Inquiry', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:50', disposition: 'answered_question' as const, sentiment: 'positive' as const, summary: 'Asked about program enrollment for PB Beginner Clinic. AI provided details, pricing, and directed to online registration.' },
-  { id: 'CL10', date: 'Mar 20, 1:00 PM', caller: 'David Wright', direction: 'outbound' as const, agent: 'Marketing Agent', duration: '0:30', disposition: 'left_message' as const, sentiment: 'neutral' as const, summary: 'Win-back call to lapsed customer. No answer. Left voicemail with 20% off promo code.' },
+  { id: 'CL01', date: 'Mar 21, 2:05 PM', caller: 'John Smith', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '1:05', disposition: 'booked' as const, sentiment: 'positive' as const, cost: 0.42, revenue: 45, summary: 'Called to book a pickleball court for Saturday at 2pm. AI checked availability, quoted $45/hour with member discount, created booking for Court 3.' },
+  { id: 'CL02', date: 'Mar 21, 1:30 PM', caller: 'Unknown (+1 647-555-1234)', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:42', disposition: 'answered_question' as const, cost: 0.18, sentiment: 'neutral' as const, summary: 'Asked about facility hours and pickleball court availability this weekend. AI provided operating hours and directed to online booking.' },
+  { id: 'CL03', date: 'Mar 21, 12:00 PM', caller: 'Lisa Park', direction: 'outbound' as const, agent: 'Payment Failure', duration: '0:55', disposition: 'left_message' as const, cost: 0.24, sentiment: 'neutral' as const, summary: 'Outbound call regarding failed Gold Membership payment. Customer did not answer. Left voicemail with payment update instructions.' },
+  { id: 'CL04', date: 'Mar 21, 11:15 AM', caller: 'Emma Singh', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '2:10', disposition: 'booked' as const, sentiment: 'positive' as const, cost: 0.68, revenue: 90, summary: 'Wanted to book 2 hours of pickleball for a group. AI booked Court 2 for 2 hours, sent payment link for $90.' },
+  { id: 'CL05', date: 'Mar 21, 10:30 AM', caller: 'Mike Russo', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:38', disposition: 'transferred' as const, cost: 0.15, sentiment: 'neutral' as const, summary: 'Called about corporate account billing question. AI could not resolve, transferred to front desk.' },
+  { id: 'CL06', date: 'Mar 20, 8:00 PM', caller: 'Unknown (+1 905-555-9876)', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:15', disposition: 'abandoned' as const, cost: 0.05, sentiment: 'negative' as const, summary: 'Caller hung up after 15 seconds. AI greeted but caller disconnected immediately.' },
+  { id: 'CL07', date: 'Mar 20, 6:30 PM', caller: 'Brandon Fisher', direction: 'outbound' as const, agent: 'Booking Reminder', duration: '0:22', disposition: 'booked' as const, cost: 0.09, sentiment: 'positive' as const, summary: 'Reminder call for tomorrow morning tennis booking. Customer confirmed attendance.' },
+  { id: 'CL08', date: 'Mar 20, 5:00 PM', caller: 'Rachel Gomez', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '1:30', disposition: 'booked' as const, sentiment: 'positive' as const, cost: 0.55, revenue: 45, summary: 'Called to cancel Thursday booking and rebook for Friday. AI processed cancellation, issued account credit, and created new booking.' },
+  { id: 'CL09', date: 'Mar 20, 3:15 PM', caller: 'Walk-in Inquiry', direction: 'inbound' as const, agent: 'Inbound Agent', duration: '0:50', disposition: 'answered_question' as const, cost: 0.22, sentiment: 'positive' as const, summary: 'Asked about program enrollment for PB Beginner Clinic. AI provided details, pricing, and directed to online registration.' },
+  { id: 'CL10', date: 'Mar 20, 1:00 PM', caller: 'David Wright', direction: 'outbound' as const, agent: 'Marketing Agent', duration: '0:30', disposition: 'left_message' as const, cost: 0.12, sentiment: 'neutral' as const, summary: 'Win-back call to lapsed customer. No answer. Left voicemail with 20% off promo code.' },
 ];
 
 function AIDashboardView() {
-  const [tab, setTab] = useState('Call Log');
+  const [tab, setTab] = useState('Analytics');
+  const [dateRange, setDateRange] = useState('Today');
   const [selectedCall, setSelectedCall] = useState<typeof MOCK_CALLS[0] | null>(null);
   const [search, setSearch] = useState('');
   return (
     <>
       <SPageHeader title="AI Dashboard"><Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern"><Settings className="w-3.5 h-3.5 mr-1.5" />Configure AI</Button></SPageHeader>
-      <STabBar tabs={['Call Log', 'Analytics', 'Configuration']} active={tab} onChange={setTab} />
+      <STabBar tabs={['Analytics', 'Call Log', 'Chat Log', 'Configuration']} active={tab} onChange={setTab} />
       <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {tab === 'Call Log' && (<>
           <SToolbar>
             <SSearchInput placeholder="Search calls..." value={search} onChange={setSearch} />
@@ -4808,11 +6715,13 @@ function AIDashboardView() {
             <SFilterPill label="Inbound" active={false} onClick={() => {}} />
             <SFilterPill label="Outbound" active={false} onClick={() => {}} />
             <SFilterPill label="All Dispositions" active={false} onClick={() => {}} />
+            <div className="flex-1" />
+            <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Download className="w-3 h-3 mr-1.5" />Export</Button>
           </SToolbar>
           <div className="card-elevated rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead><tr className="border-b border-border">
-                {['Date/Time', 'Caller', 'Dir', 'Agent', 'Duration', 'Disposition', 'Sent.', 'Revenue', 'Summary'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
+                {['Date/Time', 'Caller', 'Dir', 'Agent', 'Duration', 'Disposition', 'Sent.', 'Cost', 'Revenue', 'Summary'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-3 py-2.5 bg-card sticky top-0 z-10">{h}</th>)}
               </tr></thead>
               <tbody>{MOCK_CALLS.filter(c => !search || c.caller.toLowerCase().includes(search.toLowerCase())).map(call => (
                 <tr key={call.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedCall(call)}>
@@ -4823,6 +6732,7 @@ function AIDashboardView() {
                   <td className="px-3 py-2.5 text-sm font-medium tabular-nums">{call.duration}</td>
                   <td className="px-3 py-2.5"><StatusBadge status={call.disposition} /></td>
                   <td className="px-3 py-2.5"><div className={`w-2.5 h-2.5 rounded-full ${call.sentiment === 'positive' ? 'bg-green-500' : call.sentiment === 'negative' ? 'bg-red-500' : 'bg-gray-400'}`} /></td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium tabular-nums">${call.cost.toFixed(2)}</td>
                   <td className="px-3 py-2.5 text-sm font-medium tabular-nums">{call.revenue ? `$${call.revenue}` : '—'}</td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground font-medium max-w-40 truncate">{call.summary}</td>
                 </tr>
@@ -4831,6 +6741,11 @@ function AIDashboardView() {
           </div>
         </>)}
         {tab === 'Analytics' && (<>
+          <div className="flex items-center gap-2">
+            {['Today', '7 Days', '30 Days', 'This Month'].map(r => (
+              <button key={r} onClick={() => setDateRange(r)} className={`h-7 px-3 rounded-md text-[11px] font-bold transition-colors ${dateRange === r ? 'bg-foreground text-background' : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'}`}>{r}</button>
+            ))}
+          </div>
           <div className="grid grid-cols-4 gap-4">
             <SMetricCard label="Calls Today" value="24" trend="↑ 20% vs yesterday" trendUp={true} />
             <SMetricCard label="Revenue Today" value="$1,850" trend="↑ 15%" trendUp={true} />
@@ -4849,7 +6764,7 @@ function AIDashboardView() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="card-elevated rounded-lg p-4">
               <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-3">Call Volume by Hour</div>
               <div className="flex items-end gap-1 h-24">
@@ -4873,12 +6788,20 @@ function AIDashboardView() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SMetricCard label="Booking Conversion" value="32%" trend="↑ 4% vs last month" trendUp={true} />
             <SMetricCard label="Transfer Rate" value="8%" trend="↓ 2%" trendUp={true} />
             <SMetricCard label="Positive Sentiment" value="92%" trend="↑ 1%" trendUp={true} />
           </div>
         </>)}
+        {tab === 'Chat Log' && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"><MessageCircle className="w-7 h-7 text-primary" /></div>
+            <h3 className="text-lg font-bold mb-2">Chat Log</h3>
+            <p className="text-sm text-muted-foreground font-medium mb-3">Chat log coming in Phase 2</p>
+            <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0.5">Phase 2</Badge>
+          </div>
+        )}
         {tab === 'Configuration' && (
           <div className="max-w-2xl space-y-6">
             <div className="card-elevated rounded-lg p-4 space-y-3">
@@ -4891,14 +6814,14 @@ function AIDashboardView() {
             </div>
             <div className="card-elevated rounded-lg p-4 space-y-3">
               <div className="text-sm font-bold">Call Routing</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Transfer Number</label><input type="text" className="w-full h-8 px-3 text-sm font-medium select-modern" defaultValue="+1 (416) 555-0001" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Ring Timeout</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>30 seconds</option><option>45 seconds</option><option>60 seconds</option></select></div>
               </div>
             </div>
             <div className="card-elevated rounded-lg p-4 space-y-3">
               <div className="text-sm font-bold">Call Limits</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Concurrent Calls</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Max Duration</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>5 minutes</option><option selected>10 minutes</option><option>15 minutes</option></select></div>
               </div>
@@ -4932,15 +6855,19 @@ function AIDashboardView() {
       </div>
       {/* Call Detail Panel — inline */}
       {selectedCall && (
-        <div className="w-[520px] border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
+        <div className="w-full md:w-[520px] absolute md:relative inset-0 md:inset-auto z-20 md:z-auto border-l shrink-0 flex flex-col overflow-hidden panel-glass animate-in slide-in-from-right-5 duration-200">
             <div className="h-12 flex items-center justify-between px-5 border-b border-border shrink-0">
               <div className="flex items-center gap-2"><h3 className="text-sm font-bold">Call Details</h3><StatusBadge status={selectedCall.direction} /><StatusBadge status={selectedCall.disposition} /></div>
-              <button onClick={() => setSelectedCall(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => { const idx = MOCK_CALLS.findIndex(c => c.id === selectedCall.id); if (idx > 0) setSelectedCall(MOCK_CALLS[idx - 1]); }} className={`p-1 rounded hover:bg-muted ${MOCK_CALLS.findIndex(c => c.id === selectedCall.id) === 0 ? "opacity-30 pointer-events-none" : ""}`}><ChevronLeft className="w-4 h-4" /></button>
+                <button onClick={() => { const idx = MOCK_CALLS.findIndex(c => c.id === selectedCall.id); if (idx < MOCK_CALLS.length - 1) setSelectedCall(MOCK_CALLS[idx + 1]); }} className={`p-1 rounded hover:bg-muted ${MOCK_CALLS.findIndex(c => c.id === selectedCall.id) === MOCK_CALLS.length - 1 ? "opacity-30 pointer-events-none" : ""}`}><ChevronRight className="w-4 h-4" /></button>
+                <button onClick={() => setSelectedCall(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
+              </div>            </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Caller</div><div className="text-sm font-bold mt-1">{selectedCall.caller}</div></div>
                 <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Duration</div><div className="text-sm font-bold mt-1">{selectedCall.duration}</div></div>
+                <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Cost</div><div className="text-sm font-bold mt-1">${selectedCall.cost.toFixed(2)}</div></div>
                 <div><div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Date</div><div className="text-sm font-medium mt-1">{selectedCall.date}</div></div>
               </div>
               <div className="h-px bg-border" />
@@ -5019,53 +6946,61 @@ const SETTINGS_SECTIONS = [
 ];
 
 function SettingsView() {
-  const [section, setSection] = useState('facility');
+  const [section, setSection] = useState<string | null>('facility');
+  const [accessModel, setAccessModel] = useState<'front-desk' | 'staffed-credentials' | 'self-access'>('staffed-credentials');
+  // On mobile, null section means show the section list
+  const showSectionList = typeof window !== 'undefined' && window.innerWidth < 768 && section === null;
   return (
     <>
       <SPageHeader title="Settings" />
       <div className="flex flex-1 overflow-hidden">
-        {/* Settings Sidebar */}
-        <div className="w-[220px] border-r border-border bg-card overflow-y-auto shrink-0">
+        {/* Settings Sidebar — desktop always, mobile only when no section selected */}
+        <div className={`w-full md:w-[220px] border-r border-border bg-card overflow-y-auto shrink-0 ${section !== null ? 'hidden md:block' : ''}`}>
           <div className="p-2 space-y-0.5">
             {SETTINGS_SECTIONS.map(s => {
               const Icon = s.icon;
               const active = section === s.id;
               return (
                 <button key={s.id} onClick={() => setSection(s.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${active ? 'bg-primary/10 text-primary font-bold nav-active-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'}`}>
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 md:py-2 rounded-md text-sm md:text-[13px] transition-colors ${active ? 'bg-primary/10 text-primary font-bold nav-active-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-semibold'}`}>
                   <Icon className="w-4 h-4 shrink-0" strokeWidth={active ? 2.2 : 1.8} />
                   {s.label}
+                  <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground md:hidden" />
                 </button>
               );
             })}
           </div>
         </div>
-        {/* Settings Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Settings Content — hidden on mobile when section list is showing */}
+        <div className={`flex-1 overflow-y-auto p-3 md:p-6 ${section === null ? 'hidden md:block' : ''}`}>
+          {/* Mobile back button */}
+          <button onClick={() => setSection(null)} className="md:hidden flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground mb-3">
+            <ArrowLeft className="h-3.5 w-3.5" /> All Settings
+          </button>
           <div className="max-w-2xl space-y-6">
             {/* ── FACILITY PROFILE (4.1) ── */}
             {section === 'facility' && (<>
               <div className="space-y-1"><h2 className="text-sm font-bold">Facility Details</h2><p className="text-xs text-muted-foreground font-medium">Core identity used across the platform, portal, emails, and AI</p></div>
               <div className="space-y-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Facility Name</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="Kings Court Markham" /></div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Street Address</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="123 Sports Ave" /></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">City</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="Markham" /></div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Province</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="Ontario" /></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Postal Code</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="L3R 5T6" /></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Country</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Canada</option><option>United States</option></select></div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Phone</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="+1 (905) 555-0100" /></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Email</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="info@kingscourtmarkham.com" /></div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Website</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="https://kingscourtmarkham.com" /></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Description</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="Premier indoor sports facility in Markham" /></div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Timezone</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>America/Toronto (EST)</option></select></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Currency</label><div className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-muted/50 flex items-center text-muted-foreground">CAD ($) — set at creation</div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Facility Mode</label><div className="w-full h-8 px-3 text-sm font-bold border border-border rounded-md bg-muted/50 flex items-center text-primary">Standard</div></div>
@@ -5094,7 +7029,7 @@ function SettingsView() {
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Notification Email</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Primary Notification Email</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="dragan@courtsideai.com" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Contact Email (customer-facing)</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="info@kingscourtmarkham.com" /></div>
               </div>
@@ -5106,7 +7041,7 @@ function SettingsView() {
                 <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Logo</div>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center"><Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" /><p className="text-sm font-medium text-muted-foreground">Drag & drop or click to upload</p><p className="text-[10px] text-muted-foreground">PNG, JPG, or SVG · Max 500KB · Auto-resized to 200px wide</p></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Primary Color</label><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-md border border-border" style={{ backgroundColor: '#1CABB0' }} /><input className="w-32 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background font-mono" defaultValue="#1CABB0" /></div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Secondary Color</label><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-md border border-border" style={{ backgroundColor: '#64748B' }} /><input className="w-32 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background font-mono" defaultValue="#64748B" /></div></div>
               </div>
@@ -5117,7 +7052,7 @@ function SettingsView() {
               <Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern"><Eye className="w-3 h-3 mr-1.5" />Preview Email with Branding</Button>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Online Booking Portal</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Portal Subdomain</label><div className="flex items-center"><input className="h-8 px-3 text-sm font-medium border border-border rounded-l-md bg-background w-40" defaultValue="kingscourtmarkham" /><span className="h-8 px-3 text-xs font-medium border border-l-0 border-border rounded-r-md bg-muted flex items-center text-muted-foreground">.courtside.ai</span></div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Portal Status</label><div className="flex items-center gap-3"><StatusBadge status="active" /><span className="text-xs text-muted-foreground font-medium">Live — accepting bookings</span></div></div>
               </div>
@@ -5146,14 +7081,14 @@ function SettingsView() {
               <div className="space-y-4">
                 <h3 className="text-sm font-bold">Duration & Windows</h3>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Duration Options</label><div className="flex gap-3">{['30 min', '60 min', '90 min', '120 min', 'Custom'].map(d => <label key={d} className="flex items-center gap-1.5"><Checkbox defaultChecked={d !== 'Custom' && d !== '120 min'} /><span className="text-sm font-medium">{d}</span></label>)}</div></div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Max Advance Window</label><div className="flex items-center gap-2"><input type="number" className="w-20 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="14" /><span className="text-xs text-muted-foreground font-medium">days</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Min Lead Time</label><div className="flex items-center gap-2"><input type="number" className="w-20 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="0" /><span className="text-xs text-muted-foreground font-medium">minutes</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Time Granularity</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>30 minutes</option><option>15 minutes</option><option>60 minutes</option></select></div>
                 </div>
                 <div className="h-px bg-border" />
                 <h3 className="text-sm font-bold">Booking Quotas</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Daily Booking Cap</label><div className="flex items-center gap-2"><input type="number" className="w-20 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="2" /><span className="text-xs text-muted-foreground font-medium">per customer</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Weekly Booking Cap</label><div className="flex items-center gap-2"><input type="number" className="w-20 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="7" /><span className="text-xs text-muted-foreground font-medium">per customer</span></div></div>
                 </div>
@@ -5165,7 +7100,7 @@ function SettingsView() {
                     <div key={t.window} className="flex items-center justify-between py-1"><span className="text-sm font-medium">{t.window}</span><span className="text-xs text-muted-foreground font-medium">{t.refund}</span></div>
                   ))}
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Grace Period</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="15" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">No-Show Threshold</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="3" /><span className="text-xs text-muted-foreground font-medium">in 30 days</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Escalation</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Auto-flag</option><option>Auto-restrict</option><option>Auto-suspend</option></select></div>
@@ -5174,14 +7109,14 @@ function SettingsView() {
                 <h3 className="text-sm font-bold">Waitlist</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between"><span className="text-sm font-medium">Waitlist enabled</span><Switch defaultChecked /></div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Acceptance Window</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="30" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
                     <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Max Waitlist Size</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="10" /><span className="text-xs text-muted-foreground font-medium">per slot</span></div></div>
                   </div>
                 </div>
                 <div className="h-px bg-border" />
                 <h3 className="text-sm font-bold">Unpaid Hold Release</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Online Hold</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="30" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Staff-Created Hold</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="24" /><span className="text-xs text-muted-foreground font-medium">hours</span></div></div>
                 </div>
@@ -5236,7 +7171,7 @@ function SettingsView() {
                 <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><CreditCard className="w-5 h-5 text-primary" /></div><div><div className="text-sm font-bold">Stripe Connect</div><div className="text-xs text-green-600 font-medium">Connected — acct_1234567890</div></div></div>
                 <div className="flex items-center gap-2"><Button variant="outline" className="h-7 text-[10px] font-bold btn-outline-modern">Test Connection</Button><Button variant="outline" className="h-8 text-[11px] font-bold btn-outline-modern">Manage</Button></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Statement Descriptor</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="KINGS COURT MARKHAM" maxLength={22} /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Stripe Fee Pass-Through</label><div className="flex items-center gap-3 h-8"><Switch /><span className="text-xs text-muted-foreground font-medium">Add processing fees to customer total</span></div></div>
               </div>
@@ -5265,20 +7200,20 @@ function SettingsView() {
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Invoicing</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Invoice Number Format</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background font-mono" defaultValue="INV-{YYYY}-{####}" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Default Payment Terms</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Net 30</option><option>Net 15</option><option>Net 60</option><option>Due on Receipt</option></select></div>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Refund Policy</h2></div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Default Destination</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Account Credit</option><option>Original Payment Method</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">High-Value Threshold</label><div className="flex items-center gap-2"><span className="text-sm font-medium">$</span><input type="number" className="w-20 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="100" /></div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Refund Window</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="30" /><span className="text-xs text-muted-foreground font-medium">days</span></div></div>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Account Credits</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Credit Expiry</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="90" /><span className="text-xs text-muted-foreground font-medium">days</span></div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Expiry Warning</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="7" /><span className="text-xs text-muted-foreground font-medium">days before</span></div></div>
               </div>
@@ -5286,7 +7221,7 @@ function SettingsView() {
             {/* ── PROGRAMS (4.7) ── */}
             {section === 'programs' && (<>
               <div className="space-y-1"><h2 className="text-sm font-bold">Instructor Configuration</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Default Availability Model</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Instructor-managed</option><option>Admin-managed</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Buffer Between Lessons</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="15" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
               </div>
@@ -5294,19 +7229,19 @@ function SettingsView() {
                 <div className="flex items-center justify-between py-1"><span className="text-sm font-medium">Instructor messaging enabled</span><Switch defaultChecked /></div>
                 <div className="flex items-center justify-between py-1"><span className="text-sm font-medium">Reviews visible to public</span><Switch defaultChecked /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Min Reviews Before Display</label><input type="number" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="3" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Review Moderation</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Immediate publication</option><option>Pre-approval queue</option></select></div>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Waivers & Legal</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Waiver Reuse Period</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="12" /><span className="text-xs text-muted-foreground font-medium">months</span></div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Minor Consent Required</label><div className="flex items-center h-8"><Switch defaultChecked /><span className="text-xs text-muted-foreground font-medium ml-2">Under 18 needs guardian signature</span></div></div>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Program Policies</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Default Cancellation</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Full refund before deadline</option><option>Prorated</option><option>Credit only</option><option>No refund</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Refund Deadline</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="7" /><span className="text-xs text-muted-foreground font-medium">days before start</span></div></div>
               </div>
@@ -5326,14 +7261,14 @@ function SettingsView() {
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Default Roster Rules</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Min Roster (Doubles)</label><input type="number" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="2" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Max Roster Size</label><input type="number" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="8" /></div>
               </div>
               <div className="space-y-2">{[{ label: 'Trade/transfer window', on: false }, { label: 'Free agent pool', on: false }, { label: 'Sub pool', on: false }].map(t => <div key={t.label} className="flex items-center justify-between py-1"><span className="text-sm font-medium">{t.label}</span><Switch defaultChecked={t.on} /></div>)}</div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Score Entry</h2></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Who Can Enter Scores</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Captain + opponent confirmation</option><option>Owner only</option><option>Player + confirmation</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Confirmation Window</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="48" /><span className="text-xs text-muted-foreground font-medium">hours</span></div></div>
               </div>
@@ -5352,7 +7287,7 @@ function SettingsView() {
               <div className="space-y-1"><h2 className="text-sm font-bold">Timeclock</h2><Badge variant="secondary" className="text-[9px] ml-2">Phase 2</Badge></div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between py-1"><span className="text-sm font-medium">Timeclock enabled</span><Switch /></div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Overtime Threshold</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="44" /><span className="text-xs text-muted-foreground font-medium">hrs/week</span></div></div>
                   <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Payroll Export</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>CSV</option></select></div>
                 </div>
@@ -5384,14 +7319,14 @@ function SettingsView() {
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Quiet Hours</h2></div>
               <div className="flex items-center justify-between"><span className="text-sm font-medium">Enable quiet hours (SMS only)</span><Switch defaultChecked /></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Start</label><input type="time" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="21:00" /></div>
                 <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">End</label><input type="time" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="08:00" /></div>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h2 className="text-sm font-bold">Operator Digest</h2></div>
               <div className="flex items-center justify-between"><span className="text-sm font-medium">Send digest</span><Switch defaultChecked /></div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Frequency</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Weekly</option><option>Daily</option><option>Monthly</option></select></div>
                 <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Day</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Monday</option></select></div>
                 <div><label className="text-[11px] text-muted-foreground font-medium block mb-1">Time</label><input type="time" className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="07:00" /></div>
@@ -5421,28 +7356,256 @@ function SettingsView() {
             </>)}
             {/* ── ACCESS & CHECK-IN (4.12) ── */}
             {section === 'access' && (<>
-              <div className="space-y-1"><h2 className="text-sm font-bold">General Access Settings</h2></div>
+              {/* ── FACILITY ACCESS MODEL ── */}
+              <div className="space-y-1"><h2 className="text-sm font-bold">How do customers access your facility?</h2><p className="text-xs text-muted-foreground font-medium">This determines what your customers see in their booking details and what settings are available below.</p></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {([
+                  { id: 'front-desk' as const, title: 'Front Desk Only', desc: 'Staff greets customers on arrival. No codes or credentials needed.', icon: Users, example: 'Staffed gyms, tennis clubs with a reception desk' },
+                  { id: 'staffed-credentials' as const, title: 'Front Desk + Credentials', desc: 'Staff on-site during main hours, but customers also get door codes or QR for convenience or off-peak access.', icon: Key, example: 'Multi-sport facilities with evening/weekend self-entry' },
+                  { id: 'self-access' as const, title: 'Self-Access', desc: 'No permanent front desk. Customers rely on credentials (codes, QR, smart locks) to enter.', icon: DoorOpen, example: '24/7 pickleball courts, unmanned facilities' },
+                ]).map(m => {
+                  const Icon = m.icon;
+                  const active = accessModel === m.id;
+                  return (
+                    <button key={m.id} onClick={() => setAccessModel(m.id)} className={`text-left rounded-lg border-2 p-4 transition-all ${active ? 'border-primary bg-primary/[0.03]' : 'border-border hover:border-border/80 hover:bg-muted/30'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${active ? 'bg-primary/10' : 'bg-muted'}`}><Icon className={`h-4 w-4 ${active ? 'text-primary' : 'text-muted-foreground'}`} /></div>
+                        <h3 className="text-sm font-bold">{m.title}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-medium leading-relaxed">{m.desc}</p>
+                      <p className="text-[10px] text-muted-foreground mt-2 italic">{m.example}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* What the customer sees — preview */}
+              <div className="card-elevated rounded-lg p-3">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Customer sees in their booking detail</p>
+                {accessModel === 'front-desk' && <p className="text-sm font-medium">Check in at the front desk on arrival. No code needed.</p>}
+                {accessModel === 'staffed-credentials' && <p className="text-sm font-medium">Door code, QR code, or wallet pass (depending on enabled methods) + &quot;Front desk available during staffed hours.&quot;</p>}
+                {accessModel === 'self-access' && <p className="text-sm font-medium">Door code + QR code + smart lock (all enabled methods) + check-in instructions. No front desk mentioned.</p>}
+              </div>
+
+              <div className="h-px bg-border" />
+
+              {/* ── GENERAL ACCESS SETTINGS ── */}
+              <div className="space-y-1"><h2 className="text-sm font-bold">General Settings</h2></div>
               <div className="space-y-2">
-                {[{ label: 'Check-in tracking enabled', on: true }, { label: 'Member always-on access', on: false }, { label: 'Auto-mark program attendance on check-in', on: true }, { label: 'Waiver re-verification at check-in', on: true }, { label: 'Failed access attempt notifications', on: false }].map(t => (
-                  <div key={t.label} className="flex items-center justify-between py-1"><span className="text-sm font-medium">{t.label}</span><Switch defaultChecked={t.on} /></div>
+                {[
+                  { label: 'Check-in tracking', desc: 'Track when customers arrive for their bookings', on: accessModel !== 'front-desk', show: true },
+                  { label: 'Member always-on access', desc: 'Active members can enter anytime during operating hours without a booking', on: false, show: accessModel !== 'front-desk' },
+                  { label: 'Auto-mark program attendance on check-in', desc: 'Facility check-in auto-marks lesson/clinic attendance', on: true, show: true },
+                  { label: 'Waiver re-verification at check-in', desc: 'Alert staff if a customer\'s waiver has expired', on: true, show: accessModel !== 'self-access' },
+                  { label: 'Failed access attempt notifications', desc: 'Staff receives in-app notification when a credential is denied', on: accessModel === 'self-access', show: accessModel !== 'front-desk' },
+                ].filter(t => t.show).map(t => (
+                  <div key={t.label} className="flex items-center justify-between gap-4 py-2">
+                    <div className="min-w-0"><span className="text-sm font-medium block">{t.label}</span><span className="text-xs text-muted-foreground font-medium">{t.desc}</span></div>
+                    <Switch defaultChecked={t.on} className="shrink-0" />
+                  </div>
                 ))}
               </div>
-              <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Check-in Methods</label><div className="space-y-1">{['Front desk', 'Door code', 'QR scan (Phase 2)', 'NFC tap (Phase 2)', 'Kiosk (Phase 3)'].map(m => <label key={m} className="flex items-center gap-2"><Checkbox defaultChecked={m === 'Front desk' || m === 'Door code'} /><span className="text-sm font-medium">{m}</span></label>)}</div></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Early Arrival Buffer</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="15" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Late Departure Buffer</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="5" /><span className="text-xs text-muted-foreground font-medium">min</span></div></div>
-              </div>
+
+              {/* ── CHECK-IN METHODS ── (hidden for front-desk-only) */}
+              {accessModel !== 'front-desk' && (<>
+                <div className="h-px bg-border" />
+                <div className="space-y-1"><h2 className="text-sm font-bold">Check-in Methods</h2><p className="text-xs text-muted-foreground font-medium">Enable the methods your facility supports. Customers see available methods in their booking detail.</p></div>
+                <div className="space-y-3">
+                  {[
+                    { id: 'front-desk', label: 'Front Desk', desc: 'Staff manually checks in customers on arrival', enabled: accessModel === 'staffed-credentials', phase: null, selfAccessHide: false },
+                    { id: 'door-code', label: 'Door Code', desc: 'Facility-wide code sent to customers before their booking', enabled: true, phase: null, selfAccessHide: false },
+                    { id: 'qr-code', label: 'QR Code', desc: 'Persistent per-customer QR code — scan at reader or show to staff', enabled: true, phase: null, selfAccessHide: false },
+                    { id: 'wallet-pass', label: 'Mobile Wallet Pass', desc: 'Apple Wallet / Google Wallet pass with QR credential', enabled: accessModel === 'self-access', phase: null, selfAccessHide: false },
+                    { id: 'nfc', label: 'NFC Tap', desc: 'Phone or fob tap at NFC reader', enabled: false, phase: 'Phase 2', selfAccessHide: false },
+                    { id: 'smart-lock', label: 'Smart Lock', desc: 'App-controlled door unlock via access control integration', enabled: false, phase: 'Phase 2', selfAccessHide: false },
+                    { id: 'kiosk', label: 'Self-Service Kiosk', desc: 'Customer-facing tablet for self check-in', enabled: false, phase: 'Phase 3', selfAccessHide: false },
+                  ].map(m => (
+                    <div key={m.id} className="card-elevated rounded-lg p-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{m.label}</span>
+                          {m.phase && <Badge variant="secondary" className="text-[9px]">{m.phase}</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">{m.desc}</p>
+                      </div>
+                      <Switch defaultChecked={m.enabled} className="shrink-0" disabled={!!m.phase} />
+                    </div>
+                  ))}
+                </div>
+
+                {accessModel === 'self-access' && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-200">Self-access facilities must have at least one automated credential method enabled (Door Code, QR, or Smart Lock). Without it, customers have no way to enter.</p>
+                  </div>
+                )}
+              </>)}
+
+              {/* ── ACCESS WINDOWS ── (hidden for front-desk-only) */}
+              {accessModel !== 'front-desk' && (<>
+                <div className="h-px bg-border" />
+                <div className="space-y-1"><h2 className="text-sm font-bold">Access Windows</h2><p className="text-xs text-muted-foreground font-medium">How long before and after a booking the customer&apos;s credential is valid</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Early Arrival Buffer</label>
+                    <div className="flex items-center gap-2">
+                      <select className="w-24 h-8 px-3 text-sm font-medium select-modern">
+                        <option>0 min</option><option>5 min</option><option>10 min</option><option selected>15 min</option><option>20 min</option><option>30 min</option><option>45 min</option><option>60 min</option>
+                      </select>
+                      <span className="text-xs text-muted-foreground font-medium">before booking start</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Late Departure Buffer</label>
+                    <div className="flex items-center gap-2">
+                      <select className="w-24 h-8 px-3 text-sm font-medium select-modern">
+                        <option>0 min</option><option selected>5 min</option><option>10 min</option><option>15 min</option><option>30 min</option>
+                      </select>
+                      <span className="text-xs text-muted-foreground font-medium">after booking end</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="card-elevated rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground font-medium"><span className="font-bold text-foreground">Example:</span> A 7:00–8:00 PM booking with 15 min early / 5 min late → credential valid <span className="font-bold text-foreground">6:45 PM – 8:05 PM</span></p>
+                </div>
+              </>)}
+
+              {/* ── DOOR CODE SETTINGS ── (hidden for front-desk-only) */}
+              {accessModel !== 'front-desk' && (<>
+                <div className="h-px bg-border" />
+                <div className="space-y-1"><h2 className="text-sm font-bold">Door Code</h2><p className="text-xs text-muted-foreground font-medium">Manage the facility-wide access code shared with customers who have bookings.</p></div>
+                <div className="card-elevated rounded-lg p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Current Door Code</label>
+                      <div className="text-3xl font-bold font-mono tracking-[0.2em]">4829</div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" className="h-8 text-[10px] font-bold btn-outline-modern"><RefreshCw className="w-3 h-3 mr-1" />Generate New</Button>
+                      <Button variant="outline" className="h-8 text-[10px] font-bold btn-outline-modern"><Send className="w-3 h-3 mr-1" />Send to Today&apos;s Customers</Button>
+                    </div>
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Code Model</label>
+                      <select className="w-full h-8 px-3 text-sm font-medium select-modern">
+                        <option>Facility-wide rotating</option>
+                        <option>Time-window per-booking (Phase 2)</option>
+                      </select>
+                      <p className="text-[10px] text-muted-foreground font-medium mt-1">Facility-wide: one code for all. Time-window: unique code per booking.</p>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Code Rotation Reminder</label>
+                      <select className="w-full h-8 px-3 text-sm font-medium select-modern">
+                        <option>Off</option><option>Weekly</option><option>Monthly</option><option>Custom</option>
+                      </select>
+                      <p className="text-[10px] text-muted-foreground font-medium mt-1">Reminds Owner/Director to rotate the code</p>
+                    </div>
+                  </div>
+                </div>
+              </>)}
+
+              {/* ── CREDENTIAL DELIVERY ── (hidden for front-desk-only) */}
+              {accessModel !== 'front-desk' && (<>
+                <div className="h-px bg-border" />
+                <div className="space-y-1"><h2 className="text-sm font-bold">Credential Delivery</h2><p className="text-xs text-muted-foreground font-medium">When and how access credentials are sent to customers. Each method can have its own timing.</p></div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Delivery Channel</label>
+                  <div className="flex gap-3 flex-wrap">
+                    {['Email + SMS', 'Email only', 'SMS only'].map((ch, i) => (
+                      <label key={ch} className="flex items-center gap-2 cursor-pointer">
+                        <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${i === 0 ? 'border-primary' : 'border-border'}`}>
+                          {i === 0 && <div className="h-2 w-2 rounded-full bg-primary" />}
+                        </div>
+                        <span className="text-sm font-medium">{ch}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block">Delivery Timing by Method</label>
+                  <div className="card-elevated rounded-lg overflow-hidden overflow-x-auto">
+                    <table className="w-full">
+                      <thead><tr className="border-b border-border">
+                        {['Method', 'When to Send', 'What\'s Sent'].map(h => <th key={h} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide text-left px-4 py-2.5 bg-card">{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        <tr className="border-b border-border/50">
+                          <td className="px-4 py-2.5"><div className="flex items-center gap-2"><Key className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-sm font-medium">Door Code</span></div></td>
+                          <td className="px-4 py-2.5">
+                            <select className="h-8 px-3 text-sm font-medium select-modern w-48">
+                              <option selected>1 hour before booking</option>
+                              <option>2 hours before booking</option>
+                              <option>Morning of (8:00 AM)</option>
+                              <option>At booking confirmation</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">Door code + facility address + check-in instructions</td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <td className="px-4 py-2.5"><div className="flex items-center gap-2"><QrCode className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-sm font-medium">QR Code</span></div></td>
+                          <td className="px-4 py-2.5">
+                            <select className="h-8 px-3 text-sm font-medium select-modern w-48">
+                              <option selected>At booking confirmation</option>
+                              <option>1 hour before booking</option>
+                              <option>Morning of (8:00 AM)</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">QR image + &quot;Show at entrance&quot; instructions</td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <td className="px-4 py-2.5"><div className="flex items-center gap-2"><CreditCard className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-sm font-medium">Wallet Pass</span></div></td>
+                          <td className="px-4 py-2.5">
+                            <select className="h-8 px-3 text-sm font-medium select-modern w-48">
+                              <option selected>At booking confirmation</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground font-medium">&quot;Add to Wallet&quot; link (Apple / Google)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium">Credentials are always visible in the customer&apos;s booking detail once the delivery window has passed.</p>
+                </div>
+              </>)}
+
               <div className="h-px bg-border" />
-              <div className="space-y-1"><h2 className="text-sm font-bold">Door Code Settings</h2></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Door Code Model</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Facility-wide rotating</option><option>Time-window per-booking (Phase 2)</option></select></div>
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Current Code</label><div className="flex items-center gap-2"><input className="w-28 h-8 px-3 text-sm font-bold border border-border rounded-md bg-background font-mono tracking-widest" defaultValue="4829" /><Button variant="outline" className="h-8 text-[10px] font-bold btn-outline-modern"><RefreshCw className="w-3 h-3 mr-1" />Regenerate</Button></div></div>
+
+              {/* ── CHECK-IN INSTRUCTIONS ── (always shown, content adapts) */}
+              <div className="space-y-1"><h2 className="text-sm font-bold">Check-in Instructions</h2><p className="text-xs text-muted-foreground font-medium">{accessModel === 'front-desk' ? 'Shown to customers in their booking confirmation email' : 'Shown in booking detail and credential notifications'}</p></div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Instructions Text</label>
+                <textarea className="w-full h-16 px-3 py-2 text-sm font-medium border border-border rounded-md bg-background resize-none" defaultValue={accessModel === 'front-desk' ? 'Check in at the front desk when you arrive. Free parking available behind the building.' : 'Enter through the main entrance. Keypad is on the right side of the door.'} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Code Rotation Reminder</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Off</option><option>Weekly</option><option>Monthly</option></select></div>
-                <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Credential Delivery Timing</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Morning of booking (8 AM)</option><option>At booking</option><option>24 hours before</option></select></div>
+
+              <div className="h-px bg-border" />
+
+              {/* ── NO-SHOW DETECTION ── (always shown — useful even for front-desk) */}
+              <div className="space-y-1"><h2 className="text-sm font-bold">No-Show Detection</h2><p className="text-xs text-muted-foreground font-medium">{accessModel === 'front-desk' ? 'Flags bookings where the customer wasn\'t checked in by staff' : 'Automatically flags bookings when the customer doesn\'t check in'}</p></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Grace Period</label>
+                  <div className="flex items-center gap-2">
+                    <select className="w-24 h-8 px-3 text-sm font-medium select-modern">
+                      <option>5 min</option><option>10 min</option><option selected>15 min</option><option>20 min</option><option>30 min</option><option>60 min</option>
+                    </select>
+                    <span className="text-xs text-muted-foreground font-medium">after booking start</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Staff Override Window</label>
+                  <div className="flex items-center gap-2">
+                    <select className="w-24 h-8 px-3 text-sm font-medium select-modern">
+                      <option>1 hour</option><option>4 hours</option><option>12 hours</option><option selected>24 hours</option>
+                    </select>
+                    <span className="text-xs text-muted-foreground font-medium">to retroactively check in</span>
+                  </div>
+                </div>
               </div>
-              <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Credential Channel</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Email</option><option>SMS</option><option>Both</option></select></div>
+
               <div className="h-px bg-border" />
               <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Access Log Retention</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="90" /><span className="text-xs text-muted-foreground font-medium">days</span></div></div>
             </>)}
@@ -5457,7 +7620,7 @@ function SettingsView() {
               <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">After-Hours Greeting</label><textarea className="w-full h-16 px-3 py-2 text-sm font-medium border border-border rounded-md bg-background resize-none" defaultValue="Hi, you've reached Kings Court Markham. We're currently closed, but I'm a virtual assistant and I can still help. This call is recorded." /></div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h3 className="text-sm font-bold">Call Routing</h3></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Transfer Number</label><input className="w-full h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="+1 (905) 555-0100" /></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Ring Timeout</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>30 seconds</option><option>45 seconds</option><option>60 seconds</option></select></div>
               </div>
@@ -5467,7 +7630,7 @@ function SettingsView() {
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h3 className="text-sm font-bold">Call Limits</h3></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Concurrent Calls</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Max Duration</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>5 min</option><option selected>10 min</option><option>15 min</option></select></div>
               </div>
@@ -5486,7 +7649,7 @@ function SettingsView() {
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-1"><h3 className="text-sm font-bold">Recording</h3></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Call Recording</label><div className="h-8 px-3 text-sm font-medium border border-border rounded-md bg-muted/50 flex items-center text-muted-foreground">Always on (compliance)</div></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Recording Retention</label><div className="flex items-center gap-2"><input type="number" className="w-16 h-8 px-3 text-sm font-medium border border-border rounded-md bg-background" defaultValue="90" /><span className="text-xs text-muted-foreground font-medium">days</span></div></div>
               </div>
@@ -5514,7 +7677,7 @@ function SettingsView() {
             {section === 'security' && (<>
               <div className="space-y-1"><h2 className="text-sm font-bold">Authentication</h2></div>
               <div className="card-elevated rounded-lg p-4 flex items-center justify-between"><div><div className="text-sm font-bold">Two-Factor Authentication</div><div className="text-xs text-muted-foreground font-medium">Require 2FA for staff accounts</div></div><Switch /></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">2FA Enforcement</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>Optional</option><option>Required for all</option><option>Required for Owner/Director only</option></select></div>
                 <div><label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">Session Timeout</label><select className="w-full h-8 px-3 text-sm font-medium select-modern"><option>30 minutes</option><option>1 hour</option><option>2 hours</option><option>4 hours</option><option selected>8 hours</option></select></div>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,13 +18,14 @@ import {
   X, Plus, Minus, Lock, QrCode, Key, Mail, Phone, PanelLeft, PanelLeftClose,
   Users, Share2, Lightbulb, Video, Trophy, Dumbbell, MessageSquare,
   GraduationCap, Zap, Info, CircleDot, Target, Circle,
+  Wallet, DoorOpen, Smartphone, FileText, Download, RotateCcw, PlusCircle, Receipt, AlertTriangle,
 } from "lucide-react";
 
 // ============================================================
 // TYPES & CONFIG
 // ============================================================
 type SlotStatus = 'available' | 'booked' | 'too-short' | 'maintenance' | 'own-booking' | 'joinable';
-type PortalView = 'grid' | 'checkout' | 'confirmation';
+type PortalView = 'grid' | 'checkout' | 'confirmation' | 'my-bookings' | 'programs' | 'leagues' | 'membership' | 'passes' | 'payments' | 'profile';
 
 interface PortalCourt {
   id: number;
@@ -103,6 +104,67 @@ const FACILITY_AGREEMENTS = [
   { id: 'waiver', label: 'Liability Waiver', text: 'I acknowledge that participation in sports activities carries inherent risks of injury. I voluntarily assume all risks and release the facility, its owners, and staff from any liability for injuries sustained during my visit. I confirm I am physically able to participate in the activities I have booked.' },
 ];
 
+// Facility access configuration — determines which check-in blocks render
+// In production: fetched from facility settings. Here we simulate a facility with door code + QR + wallet pass.
+const FACILITY_ACCESS_CONFIG = {
+  methods: ['door-code', 'qr-code', 'wallet-pass'] as const, // Options: 'door-code' | 'qr-code' | 'wallet-pass' | 'smart-lock' | 'front-desk' | 'time-window-code'
+  doorCodeDelivery: 'hours-before' as const, // 'at-confirmation' | 'hours-before' | 'morning-of'
+  doorCodeLeadHours: 1,
+  earlyArrivalBuffer: 15, // minutes
+  lateDepartureBuffer: 5,
+  checkInInstructions: 'Enter through the main entrance. Keypad is on the right side of the door.',
+  cancellationPolicy: { freeWindow: 24, lateFeePercent: 50, rescheduleFreeWindow: 12 }, // hours
+};
+
+// Detailed upcoming booking data for the detail modal
+const UPCOMING_BOOKINGS_DETAIL = [
+  {
+    id: 'BK-20260321-001', court: 'Court 1', sport: 'Pickleball', surface: 'Sport Court',
+    date: 'Fri, Mar 21, 2026', time: '2:00 PM – 3:00 PM', startTime: '2:00 PM', endTime: '3:00 PM',
+    duration: '60 min', status: 'confirmed' as const,
+    players: [{ name: 'Sarah Chen', isOrganizer: true }, { name: 'Mike Torres', isOrganizer: false }],
+    pricing: { base: 45, memberDiscount: -6.75, addOns: [{ name: 'Racket Rental ×2', price: 10 }], subtotal: 48.25, tax: 6.27, total: 54.52 },
+    addOns: ['Racket Rental ×2'],
+    doorCode: '4829', doorCodeAvailable: true,
+    accessWindow: '1:45 PM – 3:05 PM',
+    bookedAt: 'Mar 19, 2026 at 9:14 AM',
+    paymentMethod: 'Visa •••• 4242',
+    paymentStatus: 'paid' as const,
+    canCancel: true, cancelDeadline: 'Mar 20, 2026 at 2:00 PM',
+    canReschedule: true, rescheduleDeadline: 'Mar 21, 2026 at 2:00 AM',
+  },
+  {
+    id: 'BK-20260322-003', court: 'Court 3', sport: 'Pickleball', surface: 'Sport Court',
+    date: 'Sat, Mar 22, 2026', time: '10:00 AM – 11:30 AM', startTime: '10:00 AM', endTime: '11:30 AM',
+    duration: '90 min', status: 'confirmed' as const,
+    players: [{ name: 'Sarah Chen', isOrganizer: true }, { name: 'James Lee', isOrganizer: false }, { name: 'Priya Patel', isOrganizer: false }, { name: 'Open Spot', isOrganizer: false }],
+    pricing: { base: 67.50, memberDiscount: -10.13, addOns: [], subtotal: 57.38, tax: 7.46, total: 64.84 },
+    addOns: [],
+    doorCode: '4829', doorCodeAvailable: false, // Not yet — delivered morning-of or hours before
+    accessWindow: '9:45 AM – 11:35 AM',
+    bookedAt: 'Mar 18, 2026 at 3:22 PM',
+    paymentMethod: 'Visa •••• 4242',
+    paymentStatus: 'paid' as const,
+    canCancel: true, cancelDeadline: 'Mar 21, 2026 at 10:00 AM',
+    canReschedule: true, rescheduleDeadline: 'Mar 21, 2026 at 10:00 PM',
+  },
+  {
+    id: 'BK-20260325-002', court: 'Court 5', sport: 'Tennis', surface: 'Hardcourt',
+    date: 'Tue, Mar 25, 2026', time: '6:00 PM – 8:00 PM', startTime: '6:00 PM', endTime: '8:00 PM',
+    duration: '120 min', status: 'confirmed' as const,
+    players: [{ name: 'Sarah Chen', isOrganizer: true }, { name: 'Alex Kim', isOrganizer: false }],
+    pricing: { base: 120, memberDiscount: -18, addOns: [{ name: 'Ball Machine', price: 10 }], subtotal: 112, tax: 14.56, total: 126.56 },
+    addOns: ['Ball Machine'],
+    doorCode: '4829', doorCodeAvailable: false,
+    accessWindow: '5:45 PM – 8:05 PM',
+    bookedAt: 'Mar 20, 2026 at 11:45 AM',
+    paymentMethod: 'Visa •••• 4242',
+    paymentStatus: 'paid' as const,
+    canCancel: true, cancelDeadline: 'Mar 24, 2026 at 6:00 PM',
+    canReschedule: true, rescheduleDeadline: 'Mar 25, 2026 at 6:00 AM',
+  },
+];
+
 // Amenity icon mapping
 function AmenityIcon({ name, className }: { name: string; className?: string }) {
   const cn = className || "h-3 w-3";
@@ -155,6 +217,17 @@ function slotToShortTime(slot: number): string {
   const period = h >= 12 ? 'PM' : 'AM';
   const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${display}:${m.toString().padStart(2, '0')} ${period}`;
+}
+
+// Compact format for the time gutter — "8 AM", "12 PM" (no :00)
+function slotToGutterTime(slot: number): string {
+  const totalMin = FACILITY.openHour * 60 + slot * 30;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  if (m === 0) return `${display} ${period}`;
+  return `${display}:${m.toString().padStart(2, '0')}`;
 }
 
 const TOTAL_SLOTS = (FACILITY.closeHour - FACILITY.openHour) * 2;
@@ -231,6 +304,9 @@ export default function BookingPortal() {
 
   // Court detail modal
   const [courtDetailId, setCourtDetailId] = useState<number | null>(null);
+  // Customer portal — selected booking for detail view
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [showBookingDetail, setShowBookingDetail] = useState(false);
 
   // Booking modal state (redesigned)
   const [modalCourtId, setModalCourtId] = useState<number | null>(null);
@@ -307,28 +383,10 @@ export default function BookingPortal() {
     const booking = bookings.find(b => b.courtId === courtId && b.slotIndex === slotIndex);
     if (booking) return { status: booking.status, label: booking.label, span: booking.bookingSpan };
 
-    // Check if this gap is below minimum booking time
-    const contiguous = getMaxContiguousSlots(courtId, slotIndex);
-    if (contiguous < MIN_BOOKING_SLOTS) {
-      const prevBooking = bookings.find(b => b.courtId === courtId && b.slotIndex === slotIndex - 1);
-      const prevOwn = isLoggedIn && OWN_BOOKINGS.some(b => b.courtId === courtId && slotIndex - 1 >= b.slotIndex && slotIndex - 1 < b.slotIndex + b.span);
-      if (slotIndex === 0 || prevBooking || prevOwn) {
-        return { status: 'too-short' };
-      }
-      const gapStart = (() => {
-        for (let i = slotIndex - 1; i >= 0; i--) {
-          const b = bookings.find(bk => bk.courtId === courtId && bk.slotIndex === i);
-          const o = isLoggedIn && OWN_BOOKINGS.some(bk => bk.courtId === courtId && i >= bk.slotIndex && i < bk.slotIndex + bk.span);
-          if (b || o) return i + 1;
-        }
-        return 0;
-      })();
-      const gapSize = getMaxContiguousSlots(courtId, gapStart);
-      if (gapSize < MIN_BOOKING_SLOTS) {
-        return { status: 'too-short' };
-      }
-    }
-
+    // Slot is available — even if the contiguous gap is shorter than the minimum
+    // booking duration. The constraint is enforced in the booking modal, not here.
+    // The grid shows it as available so the customer can click it and understand
+    // why they can or can't book (e.g., "Only 30 min available, minimum is 60 min").
     return { status: 'available' };
   }
 
@@ -339,20 +397,20 @@ export default function BookingPortal() {
   }
 
   // Get all available start times for a court on the current date
+  // Only includes starts where minimum booking duration fits
   function getAvailableStartTimes(courtId: number): number[] {
     const starts: number[] = [];
     for (let i = 0; i < TOTAL_SLOTS; i++) {
       const status = getSlotStatus(courtId, i);
-      if (status.status === 'available') {
-        if (getMaxContiguousSlots(courtId, i) >= MIN_BOOKING_SLOTS) {
-          starts.push(i);
-        }
+      if (status.status === 'available' && getMaxContiguousSlots(courtId, i) >= MIN_BOOKING_SLOTS) {
+        starts.push(i);
       }
     }
     return starts;
   }
 
   // Get valid end times given a court and start slot
+  // Only includes durations at or above minimum booking duration
   function getValidEndTimes(courtId: number, startSlot: number): number[] {
     const maxSlots = getMaxContiguousSlots(courtId, startSlot);
     const ends: number[] = [];
@@ -384,9 +442,16 @@ export default function BookingPortal() {
 
   function handleSlotClick(courtId: number, slotIndex: number) {
     setModalCourtId(courtId);
-    setModalStartSlot(slotIndex);
-    const minSlots = FACILITY.minBookingMinutes / 30;
-    setModalEndSlot(slotIndex + minSlots);
+    const maxAvailable = getMaxContiguousSlots(courtId, slotIndex);
+    if (maxAvailable >= MIN_BOOKING_SLOTS) {
+      // Viable start — pre-fill start and end times
+      setModalStartSlot(slotIndex);
+      setModalEndSlot(slotIndex + MIN_BOOKING_SLOTS);
+    } else {
+      // Constrained slot — open modal but don't pre-fill (let dropdown guide)
+      setModalStartSlot(null);
+      setModalEndSlot(null);
+    }
     setShowBookingModal(true);
   }
 
@@ -544,7 +609,7 @@ export default function BookingPortal() {
                 const active = activePortalNav === item.id;
                 const btn = (
                   <button
-                    onClick={() => { setActivePortalNav(item.id); if (item.id === 'book') { setView('grid'); setSelectedSlot(null); } }}
+                    onClick={() => { setActivePortalNav(item.id); const viewMap: Record<string, PortalView> = { book: 'grid', bookings: 'my-bookings', programs: 'programs', leagues: 'leagues', membership: 'membership', passes: 'passes', payments: 'payments', profile: 'profile' }; setView(viewMap[item.id] || 'grid'); if (item.id === 'book') setSelectedSlot(null); }}
                     className={`w-full flex items-center ${sidebarExpanded ? 'gap-2.5 px-2.5' : 'justify-center'} py-2.5 rounded-md transition-colors ${
                       active ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground font-medium'
                     }`}
@@ -655,65 +720,83 @@ export default function BookingPortal() {
               </div>
 
               {/* Grid */}
-              <div className="flex-1 overflow-auto relative" ref={gridRef}>
+              <div className="flex-1 overflow-auto relative scroll-smooth" ref={gridRef} style={{ WebkitOverflowScrolling: 'touch' }}>
                 {isLoading ? (
                   /* Skeleton loader */
-                  <div className="min-w-[600px]">
-                    <div className="sticky top-0 z-10 bg-card border-b flex">
-                      <div className="w-[52px] shrink-0 border-r px-1.5 py-2" />
+                  <div className="min-w-0">
+                    <div className="sticky top-0 z-10 bg-card border-b" style={{ display: 'grid', gridTemplateColumns: `48px repeat(6, minmax(90px, 1fr))` }}>
+                      <div className="border-r px-1 py-2 sticky left-0 bg-card z-20" />
                       {Array.from({ length: 6 }, (_, i) => (
-                        <div key={i} className="flex-1 min-w-[120px] border-r last:border-r-0 px-2 py-2 flex flex-col items-center gap-1">
-                          <Skeleton className="h-3 w-14" />
-                          <Skeleton className="h-3 w-10" />
+                        <div key={i} className="border-r last:border-r-0 px-1.5 py-2 flex flex-col items-center gap-1">
+                          <Skeleton className="h-3 w-12" />
+                          <Skeleton className="h-3 w-8" />
                         </div>
                       ))}
                     </div>
-                    {Array.from({ length: 20 }, (_, row) => (
-                      <div key={row} className="flex border-t border-border">
-                        <div className="w-[52px] shrink-0 border-r px-1.5 flex items-start pt-0.5" style={{ height: SLOT_HEIGHT * 2 }}>
-                          <Skeleton className="h-2.5 w-7" />
-                        </div>
-                        {Array.from({ length: 6 }, (_, col) => (
-                          <div key={col} className="flex-1 min-w-[120px] border-r last:border-r-0 px-0.5 py-0.5" style={{ height: SLOT_HEIGHT * 2 }}>
-                            <Skeleton className="h-full w-full rounded" />
+                    <div style={{ display: 'grid', gridTemplateColumns: `48px repeat(6, minmax(90px, 1fr))` }}>
+                      {Array.from({ length: 20 }, (_, row) => (
+                        <React.Fragment key={row}>
+                          <div className="border-r border-t px-1 flex items-start pt-0.5 sticky left-0 bg-card" style={{ height: SLOT_HEIGHT * 2, gridColumn: 1 }}>
+                            <Skeleton className="h-2.5 w-6" />
                           </div>
-                        ))}
-                      </div>
-                    ))}
+                          {Array.from({ length: 6 }, (_, col) => (
+                            <div key={col} className="border-r last:border-r-0 border-t px-0.5 py-0.5" style={{ height: SLOT_HEIGHT * 2 }}>
+                              <Skeleton className="h-full w-full rounded" />
+                            </div>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ) : filteredCourts.length === 0 ? (
+                  /* Empty state — no courts match sport filter */
+                  <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                      <CalendarDays className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-base font-bold mb-1">No courts available</h3>
+                    <p className="text-sm text-muted-foreground font-medium max-w-xs">
+                      No {selectedSport.toLowerCase()} courts are available on this date. Try selecting a different sport or date.
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-semibold" onClick={() => setSelectedSport('All')}>Show All Sports</Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-semibold" onClick={() => { setDateOffset(d => d + 1); setIsLoading(true); }}>Try Tomorrow</Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="min-w-[600px]">
+                  <div className="min-w-0">
                     {/* Column headers */}
                     <div
                       className="sticky top-0 z-10 bg-card border-b"
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: `52px repeat(${filteredCourts.length}, minmax(120px, 1fr))`,
+                        gridTemplateColumns: `48px repeat(${filteredCourts.length}, minmax(90px, 1fr))`,
                       }}
                     >
-                      <div className="border-r px-1.5 py-2 flex items-end">
+                      <div className="border-r px-1 py-2 flex items-end sticky left-0 z-20 bg-card">
                         <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">Time</span>
                       </div>
                       {filteredCourts.map((court, colIdx) => (
-                        <div key={court.id} className={`px-2 py-2 text-center flex flex-col items-center gap-0.5 ${colIdx < filteredCourts.length - 1 ? 'border-r border-r-border/50' : ''}`}>
+                        <div key={court.id} className={`px-1.5 py-2 text-center flex flex-col items-center gap-0.5 ${colIdx < filteredCourts.length - 1 ? 'border-r border-r-border/50' : ''}`}>
                           <button
                             onClick={() => setCourtDetailId(court.id)}
-                            className="text-xs font-bold leading-tight hover:text-primary transition-colors cursor-pointer flex items-center gap-1"
+                            className="text-[11px] font-bold leading-tight hover:text-primary transition-colors cursor-pointer flex items-center gap-0.5"
                             aria-label={`View ${court.name} details`}
                           >
-                            {court.name}
-                            <Info className="h-3 w-3 text-muted-foreground" />
+                            <span className="sm:hidden">{court.name.replace('Court ', 'C')}</span>
+                            <span className="hidden sm:inline">{court.name}</span>
+                            <Info className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
                           </button>
-                          <div className="flex flex-wrap items-center justify-center gap-1 mt-0.5">
+                          <div className="flex flex-wrap items-center justify-center gap-0.5 mt-0.5">
                             {court.sports.map(sport => (
-                              <span key={sport} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${sportBadgeClass(sport)}`}>
+                              <span key={sport} className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${sportBadgeClass(sport)}`}>
                                 <span className="hidden sm:inline">{sport}</span>
-                                <span className="sm:hidden"><SportIcon sport={sport} className="h-3 w-3" /></span>
+                                <span className="sm:hidden"><SportIcon sport={sport} className="h-2.5 w-2.5" /></span>
                               </span>
                             ))}
                           </div>
                           {court.amenities.length > 0 && (
-                            <div className="flex items-center gap-1 mt-0.5">
+                            <div className="hidden sm:flex items-center gap-1 mt-0.5">
                               {court.amenities.map(a => (
                                 <Tooltip key={a}>
                                   <TooltipTrigger>
@@ -733,7 +816,7 @@ export default function BookingPortal() {
                       className="relative"
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: `52px repeat(${filteredCourts.length}, minmax(120px, 1fr))`,
+                        gridTemplateColumns: `48px repeat(${filteredCourts.length}, minmax(90px, 1fr))`,
                         gridTemplateRows: `repeat(${TOTAL_SLOTS}, ${SLOT_HEIGHT}px)`,
                       }}
                     >
@@ -744,29 +827,30 @@ export default function BookingPortal() {
                           style={{ top: `${currentTimeSlot * SLOT_HEIGHT}px` }}
                         >
                           <div className="h-0.5 bg-primary/60 w-full" />
-                          <div className="absolute left-[52px] -top-1 h-2 w-2 rounded-full bg-primary/60 -translate-x-1/2" />
+                          <div className="absolute left-[48px] -top-1 h-2 w-2 rounded-full bg-primary/60 -translate-x-1/2" />
                         </div>
                       )}
 
-                      {/* Time labels + hour gridlines */}
+                      {/* Time labels + hour gridlines — sticky left on mobile */}
                       {Array.from({ length: TOTAL_SLOTS }, (_, slotIdx) => {
                         const isHourBoundary = slotIdx % 2 === 0;
-                        return (
-                          <div
-                            key={`time-${slotIdx}`}
-                            className={`border-r relative ${isHourBoundary ? 'border-t-[1.5px] border-t-border' : 'border-t border-t-border/30'}`}
-                            style={{ gridColumn: 1, gridRow: slotIdx + 1 }}
-                          >
-                            {isHourBoundary && (
-                              <span
-                                className="absolute left-1.5 text-[9px] font-medium text-muted-foreground tabular-nums z-[1]"
-                                style={{ top: `${SLOT_HEIGHT - 6}px` }}
-                              >
-                                {slotToShortTime(slotIdx)}
+                        const isHalfHour = slotIdx % 2 === 1;
+                        // Hour-boundary cells span 2 rows and contain the time label centered
+                        if (isHourBoundary) {
+                          return (
+                            <div
+                              key={`time-${slotIdx}`}
+                              className="border-r sticky left-0 z-[2] bg-card border-t-[1.5px] border-t-border flex items-center justify-start pl-1 sm:pl-2"
+                              style={{ gridColumn: 1, gridRow: `${slotIdx + 1} / span 2` }}
+                            >
+                              <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground tabular-nums leading-none whitespace-nowrap">
+                                {slotToGutterTime(slotIdx)}
                               </span>
-                            )}
-                          </div>
-                        );
+                            </div>
+                          );
+                        }
+                        // Half-hour cells are covered by the span above, skip rendering
+                        return null;
                       })}
 
                       {/* Court cells */}
@@ -784,22 +868,42 @@ export default function BookingPortal() {
                           const isLastCol = colIdx === filteredCourts.length - 1;
                           const colBorderClass = isLastCol ? '' : 'border-r border-r-border/50';
 
-                          if (slot.status === 'available') {
-                            const timeStr = slotToShortTime(slotIdx);
+                          if (slot.status === 'available' && isPast) {
+                            // Past available slot — render as unavailable
                             cells.push(
                               <div
                                 key={`${court.id}-${slotIdx}`}
-                                className={`${borderClass} ${colBorderClass} px-0.5 flex items-center justify-center ${isPast ? 'opacity-30' : ''}`}
+                                className={`${borderClass} ${colBorderClass} px-0.5 flex items-center justify-center`}
                                 style={{ gridColumn: gridCol, gridRow: slotIdx + 1 }}
                               >
-                                <button
-                                  onClick={() => !isPast && handleSlotClick(court.id, slotIdx)}
-                                  className="w-full h-[calc(100%-3px)] rounded border border-primary/30 bg-primary/[0.06] hover:border-primary/60 hover:bg-primary/15 transition-all flex items-center justify-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                  disabled={isPast}
-                                  aria-label={`Book ${court.name} at ${timeStr}`}
-                                >
-                                  <span className="text-xs font-bold text-primary/70 group-hover:text-primary tabular-nums">{timeStr}</span>
-                                </button>
+                                <div className="w-full h-[calc(100%-3px)] rounded bg-foreground/10" />
+                              </div>
+                            );
+                            slotIdx++;
+                          } else if (slot.status === 'available') {
+                            const timeStr = slotToShortTime(slotIdx);
+                            const isConstrained = getMaxContiguousSlots(court.id, slotIdx) < MIN_BOOKING_SLOTS;
+                            cells.push(
+                              <div
+                                key={`${court.id}-${slotIdx}`}
+                                className={`${borderClass} ${colBorderClass} px-0.5 flex items-center justify-center`}
+                                style={{ gridColumn: gridCol, gridRow: slotIdx + 1 }}
+                              >
+                                {isConstrained ? (
+                                  /* Constrained slot — available but below minimum duration */
+                                  <div className="w-full h-[calc(100%-3px)] rounded border border-dashed border-border bg-muted/20 flex items-center justify-center">
+                                    <span className="text-[10px] font-medium text-muted-foreground/50 tabular-nums">{timeStr}</span>
+                                  </div>
+                                ) : (
+                                  /* Fully bookable slot */
+                                  <button
+                                    onClick={() => handleSlotClick(court.id, slotIdx)}
+                                    className="w-full h-[calc(100%-3px)] rounded border border-primary/30 bg-primary/[0.06] hover:border-primary/60 hover:bg-primary/15 transition-all flex items-center justify-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    aria-label={`Book ${court.name} at ${timeStr}`}
+                                  >
+                                    <span className="text-xs font-bold text-primary/70 group-hover:text-primary tabular-nums">{timeStr}</span>
+                                  </button>
+                                )}
                               </div>
                             );
                             slotIdx++;
@@ -811,33 +915,49 @@ export default function BookingPortal() {
                                 style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
                               >
                                 <button
-                                  className="w-full h-full rounded bg-primary/10 border border-primary/25 flex flex-col items-center justify-center cursor-pointer hover:bg-primary/15 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  onClick={() => { setSelectedBookingId('BK-20260321-001'); setShowBookingDetail(true); }}
+                                  className="w-full h-full rounded bg-primary border border-primary flex flex-col items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
                                   aria-label={`Your booking: ${slotToTime(slotIdx)} – ${slotToTime(slotIdx + rowSpan)}`}
                                 >
-                                  <span className="text-[11px] font-bold text-primary">{slot.label}</span>
-                                  {rowSpan > 2 && <span className="text-[10px] font-medium text-primary/70">{slotToTime(slotIdx)} – {slotToTime(slotIdx + rowSpan)}</span>}
+                                  <span className="text-[11px] font-bold text-white">{slot.label}</span>
+                                  {rowSpan > 2 && <span className="text-[10px] font-medium text-white/80">{slotToTime(slotIdx)} – {slotToTime(slotIdx + rowSpan)}</span>}
                                 </button>
                               </div>
                             );
                             slotIdx += rowSpan;
                           } else if (slot.status === 'joinable' && slot.label) {
-                            cells.push(
-                              <div
-                                key={`${court.id}-${slotIdx}`}
-                                className={`${borderClass} ${colBorderClass} px-0.5 py-0.5 ${isPast ? 'opacity-30' : ''}`}
-                                style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
-                              >
-                                <button
-                                  onClick={() => !isPast && handleSlotClick(court.id, slotIdx)}
-                                  className="w-full h-full rounded bg-orange-50 border border-orange-200 flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400/40"
-                                  disabled={isPast}
-                                  aria-label={`Join ${slot.label} at ${slotToTime(slotIdx)}`}
+                            if (isPast) {
+                              // Past joinable — render as unavailable
+                              cells.push(
+                                <div
+                                  key={`${court.id}-${slotIdx}`}
+                                  className={`${borderClass} ${colBorderClass} px-0.5 py-0.5`}
+                                  style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
                                 >
-                                  <span className="text-xs font-bold text-orange-700">{slot.label}</span>
-                                  {rowSpan > 2 && <span className="text-[10px] font-semibold text-orange-600">Join</span>}
-                                </button>
-                              </div>
-                            );
+                                  <div className="w-full h-full rounded bg-foreground/10 flex flex-col items-center justify-center">
+                                    <span className="text-[10px] font-semibold text-muted-foreground/70">Unavailable</span>
+                                    {rowSpan > 1 && <span className="text-[9px] text-muted-foreground/50">{slotToTime(slotIdx)} – {slotToTime(slotIdx + rowSpan)}</span>}
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              cells.push(
+                                <div
+                                  key={`${court.id}-${slotIdx}`}
+                                  className={`${borderClass} ${colBorderClass} px-0.5 py-0.5`}
+                                  style={{ gridColumn: gridCol, gridRow: `${slotIdx + 1} / span ${rowSpan}` }}
+                                >
+                                  <button
+                                    onClick={() => handleSlotClick(court.id, slotIdx)}
+                                    className="w-full h-full rounded bg-orange-50 border border-orange-200 flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400/40"
+                                    aria-label={`Join ${slot.label} at ${slotToTime(slotIdx)}`}
+                                  >
+                                    <span className="text-xs font-bold text-orange-700">{slot.label}</span>
+                                    {rowSpan > 2 && <span className="text-[10px] font-semibold text-orange-600">Join</span>}
+                                  </button>
+                                </div>
+                              );
+                            }
                             slotIdx += rowSpan;
                           } else if ((slot.status === 'booked' || slot.status === 'maintenance') && slot.span) {
                             // Unified unavailable block — text inside block
@@ -897,7 +1017,7 @@ export default function BookingPortal() {
           {view === 'checkout' && selectedCourt && selectedSlot && (
             <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
               {/* Checkout header — no step indicator */}
-              <div className="border-b bg-card px-6 py-3 flex items-center gap-3">
+              <div className="border-b bg-card px-4 md:px-6 py-3 flex items-center gap-3">
                 <button onClick={handleBackToGrid} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors" aria-label="Back to schedule">
                   <ChevronLeft className="h-4 w-4" /> Back to schedule
                 </button>
@@ -906,7 +1026,7 @@ export default function BookingPortal() {
               </div>
 
               {/* Two-column layout */}
-              <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
                 {/* Left column — form */}
                 <div className="lg:col-span-3 space-y-5">
 
@@ -914,9 +1034,9 @@ export default function BookingPortal() {
                   <Card className="shadow-sm">
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Booking Summary</CardTitle></CardHeader>
                     <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <p className="text-base font-bold">{selectedCourt.name} — {selectedCourt.sport}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="text-sm sm:text-base font-bold">{selectedCourt.name} — {selectedCourt.sport}</p>
                           <p className="text-sm text-muted-foreground">{displayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
                           <p className="text-sm text-muted-foreground">{slotToTime(selectedSlot.slotIndex)} – {slotToTime(selectedSlot.slotIndex + selectedDuration / 30)} ({selectedDuration} min)</p>
                           {selectedCourt.amenities.length > 0 && (
@@ -928,7 +1048,7 @@ export default function BookingPortal() {
                           setModalStartSlot(selectedSlot.slotIndex);
                           setModalEndSlot(selectedSlot.slotIndex + selectedDuration / 30);
                           setShowBookingModal(true);
-                        }} className="text-xs font-semibold text-primary hover:underline">Change</button>
+                        }} className="text-xs font-semibold text-primary hover:underline shrink-0">Change</button>
                       </div>
                     </CardContent>
                   </Card>
@@ -944,13 +1064,13 @@ export default function BookingPortal() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">First Name *</label><input className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Jane" aria-required="true" /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Last Name *</label><input className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Doe" aria-required="true" /></div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">First Name *</label><input className="w-full h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Jane" aria-required="true" /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Last Name *</label><input className="w-full h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Doe" aria-required="true" /></div>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Email *</label><input className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="jane@email.com" type="email" aria-required="true" /></div>
-                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Phone *</label><input className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="(647) 555-1234" type="tel" aria-required="true" /></div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Email *</label><input className="w-full h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="jane@email.com" type="email" aria-required="true" /></div>
+                            <div><label className="text-[11px] font-semibold text-muted-foreground block mb-1">Phone *</label><input className="w-full h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="(647) 555-1234" type="tel" aria-required="true" /></div>
                           </div>
                         </div>
                       )}
@@ -960,8 +1080,8 @@ export default function BookingPortal() {
                         <div className="space-y-2">
                           {guestPlayers.map((player, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <input className="flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder={`Player ${idx + 2} name or email`} value={player} onChange={e => { const next = [...guestPlayers]; next[idx] = e.target.value; setGuestPlayers(next); }} />
-                              <button onClick={() => setGuestPlayers(guestPlayers.filter((_, i) => i !== idx))} className="h-9 w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground" aria-label="Remove player"><X className="h-3.5 w-3.5" /></button>
+                              <input className="flex-1 h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder={`Player ${idx + 2} name or email`} value={player} onChange={e => { const next = [...guestPlayers]; next[idx] = e.target.value; setGuestPlayers(next); }} />
+                              <button onClick={() => setGuestPlayers(guestPlayers.filter((_, i) => i !== idx))} className="h-10 w-10 sm:h-9 sm:w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground shrink-0" aria-label="Remove player"><X className="h-3.5 w-3.5" /></button>
                             </div>
                           ))}
                         </div>
@@ -973,18 +1093,18 @@ export default function BookingPortal() {
                       <Separator />
 
                       {/* Facility-configurable custom fields */}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Number of Players</label>
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => setPlayerCount(Math.max(1, playerCount - 1))} className="h-9 w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors" aria-label="Decrease players"><Minus className="h-3.5 w-3.5" /></button>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setPlayerCount(Math.max(1, playerCount - 1))} className="h-10 w-10 sm:h-9 sm:w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors" aria-label="Decrease players"><Minus className="h-3.5 w-3.5" /></button>
                             <span className="text-sm font-bold w-8 text-center tabular-nums">{playerCount}</span>
-                            <button onClick={() => setPlayerCount(Math.min(8, playerCount + 1))} className="h-9 w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors" aria-label="Increase players"><Plus className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => setPlayerCount(Math.min(8, playerCount + 1))} className="h-10 w-10 sm:h-9 sm:w-9 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors" aria-label="Increase players"><Plus className="h-3.5 w-3.5" /></button>
                           </div>
                         </div>
                         <div>
                           <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Skill Level</label>
-                          <select value={skillLevel} onChange={e => setSkillLevel(e.target.value)} className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40">
+                          <select value={skillLevel} onChange={e => setSkillLevel(e.target.value)} className="w-full h-10 sm:h-9 px-3 rounded-md border border-border bg-background text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40">
                             <option value="beginner">Beginner</option>
                             <option value="intermediate">Intermediate</option>
                             <option value="advanced">Advanced</option>
@@ -1123,7 +1243,7 @@ export default function BookingPortal() {
                         {showPromoInput ? (
                           <div className="pt-1">
                             <div className="flex gap-2">
-                              <input value={promoCode} onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); }} placeholder="Promo code" className="flex-1 h-8 px-3 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                              <input value={promoCode} onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); }} placeholder="Promo code" className="flex-1 h-10 sm:h-8 px-3 rounded-md border border-border bg-background text-sm sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" />
                               <Button size="sm" variant="outline" className="h-8 text-[10px] font-semibold px-3" onClick={() => { if (promoCode === 'WELCOME20') setPromoApplied(true); }}>Apply</Button>
                             </div>
                             {promoApplied && <p className="text-[10px] text-success mt-1 font-semibold">WELCOME20 applied — 20% off!</p>}
@@ -1167,14 +1287,14 @@ export default function BookingPortal() {
                 </div>
 
                 {/* Mobile-only: inline price summary before sticky bar */}
-                <div className="lg:hidden space-y-3 pb-24">
+                <div className="lg:hidden space-y-3 pb-32">
                   <Card className="shadow-sm">
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-bold">Price Breakdown</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">{selectedCourt.name} — {selectedDuration} min</span><span className="tabular-nums font-medium">${basePrice.toFixed(2)}</span></div>
+                      <div className="flex justify-between gap-2 text-sm"><span className="text-muted-foreground truncate">{selectedCourt.name} — {selectedDuration} min</span><span className="tabular-nums font-medium shrink-0">${basePrice.toFixed(2)}</span></div>
                       {Object.entries(addOns).filter(([, qty]) => qty > 0).map(([id, qty]) => { const addon = COURT_ADDONS.find(a => a.id === id); return addon ? <div key={id} className="flex justify-between text-sm"><span className="text-muted-foreground">{addon.name} × {qty}</span><span className="tabular-nums font-medium">${(addon.price * qty).toFixed(2)}</span></div> : null; })}
                       {showPromoInput ? (
-                        <div className="pt-1"><div className="flex gap-2"><input value={promoCode} onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); }} placeholder="Promo code" className="flex-1 h-8 px-3 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" /><Button size="sm" variant="outline" className="h-8 text-[10px] font-semibold px-3" onClick={() => { if (promoCode === 'WELCOME20') setPromoApplied(true); }}>Apply</Button></div>{promoApplied && <p className="text-[10px] text-success mt-1 font-semibold">WELCOME20 applied — 20% off!</p>}</div>
+                        <div className="pt-1"><div className="flex gap-2"><input value={promoCode} onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); }} placeholder="Promo code" className="flex-1 h-10 sm:h-8 px-3 rounded-md border border-border bg-background text-sm sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary/40" /><Button size="sm" variant="outline" className="h-8 text-[10px] font-semibold px-3" onClick={() => { if (promoCode === 'WELCOME20') setPromoApplied(true); }}>Apply</Button></div>{promoApplied && <p className="text-[10px] text-success mt-1 font-semibold">WELCOME20 applied — 20% off!</p>}</div>
                       ) : <button onClick={() => setShowPromoInput(true)} className="text-xs font-semibold text-primary hover:underline pt-1">Have a promo code?</button>}
                       {promoApplied && <div className="flex justify-between text-sm"><span className="text-success">Promo (20%)</span><span className="tabular-nums font-medium text-success">−${promoDiscount.toFixed(2)}</span></div>}
                       <Separator />
@@ -1189,9 +1309,9 @@ export default function BookingPortal() {
 
               {/* Mobile sticky checkout bar */}
               <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] p-4 safe-area-bottom">
-                <div className="flex items-center justify-between mb-2">
-                  <div><span className="text-xs text-muted-foreground font-medium">Total Due</span><div className="text-lg font-bold tabular-nums">${total.toFixed(2)}</div></div>
-                  <Button className="h-11 px-6 text-sm font-bold" disabled={!allAgreed} onClick={handleConfirm}>Confirm Booking</Button>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <div className="shrink-0"><span className="text-[10px] text-muted-foreground font-medium">Total Due</span><div className="text-lg font-bold tabular-nums">${total.toFixed(2)}</div></div>
+                  <Button className="h-11 px-4 sm:px-6 text-sm font-bold flex-1 sm:flex-none" disabled={!allAgreed} onClick={handleConfirm}>Confirm Booking</Button>
                 </div>
                 <p className="text-[9px] text-center text-muted-foreground">Secure payment by Stripe</p>
               </div>
@@ -1201,13 +1321,13 @@ export default function BookingPortal() {
           {/* ===== CONFIRMATION VIEW ===== */}
           {view === 'confirmation' && selectedCourt && selectedSlot && (
             <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
-              <div className="max-w-2xl mx-auto px-6 py-10">
+              <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10">
                 {/* Success header */}
-                <div className="text-center mb-8">
-                  <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-500">
-                    <CheckCircle2 className="h-8 w-8 text-success" />
+                <div className="text-center mb-6 md:mb-8">
+                  <div className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3 md:mb-4 animate-in zoom-in duration-500">
+                    <CheckCircle2 className="h-7 w-7 md:h-8 md:w-8 text-success" />
                   </div>
-                  <h1 className="text-2xl font-bold">Booking Confirmed!</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold">Booking Confirmed!</h1>
                   <p className="text-muted-foreground mt-1">Your court is reserved and ready to go.</p>
                 </div>
 
@@ -1294,12 +1414,12 @@ export default function BookingPortal() {
 
                 {/* Share + Actions */}
                 <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-3">
-                    <Button onClick={handleBackToGrid} className="h-10 px-6 text-sm font-semibold">Book Another Court</Button>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <Button onClick={handleBackToGrid} className="h-10 px-6 text-sm font-semibold w-full sm:w-auto">Book Another Court</Button>
                     {isLoggedIn ? (
-                      <Button variant="outline" onClick={() => { setActivePortalNav('bookings'); }} className="h-10 px-6 text-sm font-semibold">View My Bookings</Button>
+                      <Button variant="outline" onClick={() => { setActivePortalNav('bookings'); }} className="h-10 px-6 text-sm font-semibold w-full sm:w-auto">View My Bookings</Button>
                     ) : (
-                      <Button variant="outline" onClick={() => setShowSignInModal(true)} className="h-10 px-6 text-sm font-semibold">Create Account to Manage Bookings</Button>
+                      <Button variant="outline" onClick={() => setShowSignInModal(true)} className="h-10 px-6 text-sm font-semibold w-full sm:w-auto">Create Account</Button>
                     )}
                   </div>
                   <button
@@ -1311,6 +1431,337 @@ export default function BookingPortal() {
                   >
                     <Share2 className="h-3.5 w-3.5" /> Share with Players
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== MY BOOKINGS VIEW ===== */}
+          {view === 'my-bookings' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold">My Bookings</h2>
+                  <Button size="sm" className="h-8 text-xs font-semibold" onClick={() => { setActivePortalNav('book'); setView('grid'); }}><Plus className="h-3.5 w-3.5 mr-1" />Book a Court</Button>
+                </div>
+                <div className="flex border-b border-border">{['Upcoming', 'Recurring', 'Past'].map(tab => (<button key={tab} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${tab === 'Upcoming' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{tab}</button>))}</div>
+                {/* Upcoming booking cards — tap to open detail modal */}
+                {UPCOMING_BOOKINGS_DETAIL.map(bk => (
+                  <button
+                    key={bk.id}
+                    onClick={() => { setSelectedBookingId(bk.id); setShowBookingDetail(true); }}
+                    className="w-full text-left"
+                  >
+                    <Card className={`shadow-sm hover:shadow-md transition-shadow cursor-pointer ${selectedBookingId === bk.id && showBookingDetail ? 'ring-2 ring-primary' : ''}`}>
+                      <CardContent className="p-4 space-y-2.5">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold">{bk.court} — {bk.sport}</h3>
+                              <Badge className="text-[9px] py-0 bg-green-100 text-green-700">{bk.status}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5">{bk.date} · {bk.time}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold tabular-nums">${bk.pricing.total.toFixed(2)}</span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{bk.duration}</span>
+                          <span className="flex items-center gap-1"><Users className="h-3 w-3" />{bk.players.length} players</span>
+                          {bk.addOns.length > 0 && <span className="flex items-center gap-1"><Dumbbell className="h-3 w-3" />{bk.addOns.join(', ')}</span>}
+                        </div>
+                        {/* Compact access hint — just enough to be useful at a glance */}
+                        {FACILITY_ACCESS_CONFIG.methods.includes('door-code') && bk.doorCodeAvailable && (
+                          <div className="flex items-center gap-2 bg-primary/5 rounded-md px-2.5 py-1.5">
+                            <Key className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-xs font-bold text-primary tracking-widest font-mono">{bk.doorCode}</span>
+                            <span className="text-[10px] text-muted-foreground font-medium ml-auto">Door Code</span>
+                          </div>
+                        )}
+                        {FACILITY_ACCESS_CONFIG.methods.includes('door-code') && !bk.doorCodeAvailable && (
+                          <div className="flex items-center gap-2 bg-muted/30 rounded-md px-2.5 py-1.5">
+                            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-[11px] text-muted-foreground font-medium">Door code available {FACILITY_ACCESS_CONFIG.doorCodeLeadHours}hr before booking</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </button>
+                ))}
+                {/* Book Again shortcut */}
+                <Card className="shadow-sm border-primary/10 bg-primary/[0.02]">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div><div className="text-sm font-bold">Book Again</div><div className="text-xs text-muted-foreground font-medium">Court 1 — Pickleball, 60 min (your last booking)</div></div>
+                    <Button size="sm" className="h-8 text-xs font-semibold" onClick={() => { setActivePortalNav('book'); setView('grid'); }}>Book</Button>
+                  </CardContent>
+                </Card>
+                {/* Past bookings */}
+                <h3 className="text-sm font-bold text-muted-foreground pt-2">Past Bookings</h3>
+                {[{ id: 'BK-20260318-005', court: 'Court 2', sport: 'Pickleball', date: 'Mar 18', time: '7–8 PM', amount: 38.25, status: 'completed', checkin: 'Checked in' }, { id: 'BK-20260315-002', court: 'Court 1', sport: 'Pickleball', date: 'Mar 15', time: '10–11 AM', amount: 38.25, status: 'completed', checkin: 'Checked in' }, { id: 'BK-20260312-001', court: 'Court 5', sport: 'Tennis', date: 'Mar 12', time: '6–8 PM', amount: 102.00, status: 'completed', checkin: 'Checked in' }, { id: 'BK-20260308-004', court: 'Court 1', sport: 'Pickleball', date: 'Mar 8', time: '3–4 PM', amount: 38.25, status: 'cancelled', checkin: '—' }].map(bk => (
+                  <div key={bk.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-b-0">
+                    <div className="flex-1"><div className="flex items-center gap-2"><span className="text-sm font-medium">{bk.court} — {bk.sport}</span><Badge variant="secondary" className={`text-[9px] py-0 ${bk.status === 'cancelled' ? 'bg-red-100 text-red-700' : ''}`}>{bk.status}</Badge></div><p className="text-xs text-muted-foreground font-medium">{bk.date} · {bk.time} · {bk.checkin}</p></div>
+                    <div className="text-right"><span className="text-sm font-medium tabular-nums">${bk.amount.toFixed(2)}</span><button className="block text-[10px] font-semibold text-primary hover:underline">Receipt</button></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== PROGRAMS VIEW ===== */}
+          {view === 'programs' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Programs</h2>
+                <div className="flex border-b border-border">{['My Enrollments', 'Browse Programs', 'Book a Pro'].map(tab => (<button key={tab} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${tab === 'My Enrollments' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{tab}</button>))}</div>
+                {/* Enrolled programs */}
+                <Card className="shadow-sm">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div><h3 className="text-sm font-bold">PB Beginner Clinic</h3><p className="text-xs text-muted-foreground font-medium">Coach Sarah · Tuesdays 6–7 PM · Court 1</p></div>
+                      <Badge className="text-[9px] py-0 bg-green-100 text-green-700">Active</Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
+                      <span>Mar 4 – Apr 22, 2026</span><span>8 sessions</span><span>Attendance: 3/3 (100%)</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground font-medium">Next session: Tue, Mar 25 · 6:00 PM</div>
+                    <div className="flex gap-2"><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">View Details</Button><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold text-destructive hover:text-destructive">Cancel Enrollment</Button></div>
+                  </CardContent>
+                </Card>
+                {/* Waitlisted */}
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <Info className="h-4 w-4 text-amber-600 shrink-0" /><div className="flex-1"><span className="text-sm font-medium text-amber-800 dark:text-amber-200">Junior Tennis Camp — You are #2 on the waitlist</span><p className="text-xs text-muted-foreground font-medium">We&apos;ll notify you if a spot opens. You won&apos;t be charged until confirmed.</p></div>
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold shrink-0">Leave Waitlist</Button>
+                </div>
+                {/* Browse programs preview */}
+                <h3 className="text-sm font-bold text-muted-foreground pt-2">Available Programs</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[{ name: 'Advanced PB Drills', instructor: 'Coach Sarah', schedule: 'Thu 7–8:30 PM', sport: 'Pickleball', spots: '4 spots left', price: '$220' }, { name: 'Basketball Open Gym', instructor: 'Staff', schedule: 'Sat & Sun 8–11 AM', sport: 'Basketball', spots: '12 spots left', price: '$15/visit' }, { name: 'VB Skills Workshop', instructor: 'Coach Jess', schedule: 'Wed 5–6:30 PM', sport: 'Volleyball', spots: '8 spots left', price: '$160' }].map(p => (
+                    <Card key={p.name} className="shadow-sm"><CardContent className="p-3 space-y-1.5">
+                      <div className="flex items-center justify-between"><h4 className="text-sm font-bold">{p.name}</h4><span className="text-xs font-bold text-primary">{p.price}</span></div>
+                      <p className="text-xs text-muted-foreground font-medium">{p.instructor} · {p.schedule}</p>
+                      <div className="flex items-center justify-between"><Badge variant="secondary" className="text-[9px] py-0">{p.sport}</Badge><span className="text-[10px] text-muted-foreground font-medium">{p.spots}</span></div>
+                      <Button variant="outline" size="sm" className="w-full h-7 text-[10px] font-semibold">Register</Button>
+                    </CardContent></Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== LEAGUES VIEW ===== */}
+          {view === 'leagues' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Leagues & Events</h2>
+                <div className="flex border-b border-border">{['My Leagues', 'Browse'].map(tab => (<button key={tab} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${tab === 'My Leagues' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{tab}</button>))}</div>
+                {/* Active league */}
+                <Card className="shadow-sm">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div><h3 className="text-sm font-bold">Spring Pickleball League</h3><p className="text-xs text-muted-foreground font-medium">Round Robin · Doubles · Mar 3 – May 23, 2026</p></div>
+                      <Badge className="text-[9px] py-0 bg-blue-100 text-blue-700">In Progress</Badge>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Your Standing</div>
+                      <div className="flex items-center gap-3"><span className="text-2xl font-bold text-primary">#2</span><div className="flex-1"><div className="text-sm font-medium">Team Doe & Martin</div><div className="text-xs text-muted-foreground font-medium">6 played · 4W 1L 1D · 13 pts</div></div></div>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Next Match</div>
+                      <div className="text-sm font-medium">vs. Kitchen Crew · Mon, Mar 24 · 7:00 PM · Court 1</div>
+                    </div>
+                    <div className="flex gap-2"><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Standings</Button><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Schedule</Button><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Enter Score</Button></div>
+                  </CardContent>
+                </Card>
+                {/* Upcoming match score entry */}
+                <Card className="shadow-sm border-amber-200 dark:border-amber-800">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2"><Info className="h-4 w-4 text-amber-600" /><span className="text-sm font-bold text-amber-800 dark:text-amber-200">Score Entry Needed</span></div>
+                    <p className="text-xs text-muted-foreground font-medium">Mar 17 match vs. Baseline Bandits — Opponent submitted 11-7, 11-9. Please confirm or dispute within 48 hours.</p>
+                    <div className="flex gap-2"><Button size="sm" className="h-7 text-[10px] font-semibold">Confirm Score</Button><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Dispute</Button></div>
+                  </CardContent>
+                </Card>
+                {/* Browse leagues preview */}
+                <h3 className="text-sm font-bold text-muted-foreground pt-2">Open for Registration</h3>
+                {[{ name: 'Tennis Singles Ladder', format: 'Ladder · Singles', sport: 'Tennis', dates: 'Apr 1 – Jun 30', spots: '6 spots left', fee: '$80' }, { name: 'Corporate Volleyball Social', format: 'Social Mixer · Mixed', sport: 'Volleyball', dates: 'Apr 12', spots: '18 spots left', fee: '$25' }].map(l => (
+                  <Card key={l.name} className="shadow-sm"><CardContent className="p-3 flex items-center justify-between">
+                    <div><h4 className="text-sm font-bold">{l.name}</h4><p className="text-xs text-muted-foreground font-medium">{l.format} · {l.dates} · {l.spots}</p></div>
+                    <div className="text-right"><div className="text-sm font-bold text-primary">{l.fee}</div><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold mt-1">Register</Button></div>
+                  </CardContent></Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== MEMBERSHIP VIEW ===== */}
+          {view === 'membership' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Membership</h2>
+                <Card className="shadow-sm border-primary/20 bg-primary/[0.02]">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center"><Zap className="w-6 h-6 text-primary" /></div><div><h3 className="text-lg font-bold">Gold Membership</h3><p className="text-sm text-muted-foreground font-medium">Active since January 2026</p></div></div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Status</div><Badge className="text-[10px] py-0 bg-green-100 text-green-700 mt-0.5">Active</Badge></div>
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Billing Cycle</div><div className="text-sm font-medium">Calendar month</div></div>
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Monthly Price</div><div className="text-sm font-bold">$99.00/mo</div></div>
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Next Billing</div><div className="text-sm font-medium">Apr 1, 2026</div></div>
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Payment Method</div><div className="text-sm font-medium">Visa •4242</div></div>
+                      <div><div className="text-[10px] text-muted-foreground font-medium uppercase">Auto-Renew</div><div className="text-sm font-medium">Yes</div></div>
+                    </div>
+                    <Separator />
+                    <div><div className="text-[10px] text-muted-foreground font-medium uppercase mb-2">Benefits</div>
+                      <div className="space-y-1.5">{['15% off all court bookings', 'Extended booking window (21 days vs. 14)', 'Priority access to prime time slots', 'Free guest pass (1/month)', '2 membership freezes per year (30 days max)'].map(b => <div key={b} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" /><span className="text-sm font-medium">{b}</span></div>)}</div>
+                    </div>
+                    <Separator />
+                    <div className="flex gap-2"><Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold flex-1">Upgrade Tier</Button><Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold flex-1">Freeze Membership</Button><Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold flex-1 text-destructive hover:text-destructive">Cancel</Button></div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold">Billing History</CardTitle></CardHeader><CardContent>
+                  {[{ date: 'Mar 1, 2026', desc: 'Gold Membership — March', amount: 99, status: 'Paid' }, { date: 'Feb 1, 2026', desc: 'Gold Membership — February', amount: 99, status: 'Paid' }, { date: 'Jan 1, 2026', desc: 'Gold Membership — January', amount: 99, status: 'Paid' }].map((tx, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-b-0"><div><div className="text-sm font-medium">{tx.desc}</div><div className="text-xs text-muted-foreground font-medium">{tx.date}</div></div><div className="text-right"><span className="text-sm font-medium tabular-nums">${tx.amount.toFixed(2)}</span><div className="text-[10px] text-green-600 font-medium">{tx.status}</div></div></div>
+                  ))}
+                </CardContent></Card>
+              </div>
+            </div>
+          )}
+
+          {/* ===== PASSES VIEW ===== */}
+          {view === 'passes' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Passes & Packages</h2>
+                {/* Active pass */}
+                <Card className="shadow-sm"><CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between"><div><h3 className="text-sm font-bold">10-Visit Court Pass</h3><p className="text-xs text-muted-foreground font-medium">Purchased Feb 15, 2026 · Expires Sep 15, 2026</p></div><Badge className="text-[9px] py-0 bg-green-100 text-green-700">Active</Badge></div>
+                  <div><div className="flex justify-between text-xs text-muted-foreground font-medium mb-1"><span>Usage</span><span>7 of 10 remaining</span></div><div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: '30%' }} /></div></div>
+                  <div className="text-xs text-muted-foreground font-medium">Purchased at $340.00 (member price) · Standard: $400.00</div>
+                  <div className="h-px bg-border" />
+                  <div className="text-[10px] text-muted-foreground font-medium uppercase mb-1">Recent Usage</div>
+                  {[{ date: 'Mar 21', desc: 'Court 1 — Pickleball (60 min)' }, { date: 'Mar 18', desc: 'Court 2 — Pickleball (60 min)' }, { date: 'Mar 15', desc: 'Court 1 — Pickleball (60 min)' }].map((u, i) => <div key={i} className="flex justify-between text-xs font-medium py-1"><span className="text-muted-foreground">{u.date}</span><span>{u.desc}</span></div>)}
+                </CardContent></Card>
+                {/* Lesson package */}
+                <Card className="shadow-sm"><CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between"><div><h3 className="text-sm font-bold">5-Lesson Private Package</h3><p className="text-xs text-muted-foreground font-medium">With Coach Sarah · Purchased Mar 1, 2026 · Expires Sep 1, 2026</p></div><Badge className="text-[9px] py-0 bg-green-100 text-green-700">Active</Badge></div>
+                  <div><div className="flex justify-between text-xs text-muted-foreground font-medium mb-1"><span>Sessions</span><span>3 of 5 remaining</span></div><div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: '40%' }} /></div></div>
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Book Next Lesson</Button>
+                </CardContent></Card>
+                {/* Expired pass */}
+                <h3 className="text-sm font-bold text-muted-foreground pt-2">Expired</h3>
+                <Card className="shadow-sm opacity-60"><CardContent className="p-3 flex items-center justify-between">
+                  <div><div className="text-sm font-medium">5-Visit Pass</div><div className="text-xs text-muted-foreground font-medium">Expired Jan 15, 2026 · 1 unused visit</div></div>
+                  <Badge variant="secondary" className="text-[9px] py-0">Expired</Badge>
+                </CardContent></Card>
+                {/* Purchase new */}
+                <h3 className="text-sm font-bold text-muted-foreground pt-2">Available Passes</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[{ name: '10-Visit Pass', price: '$400', member: '$340', validity: '6 months' }, { name: 'Day Pass', price: '$55', member: '$45', validity: '1 day' }, { name: '5-Lesson Package (Private)', price: '$375', member: '$320', validity: '6 months' }].map(p => (
+                    <Card key={p.name} className="shadow-sm"><CardContent className="p-3 space-y-1">
+                      <div className="flex justify-between"><h4 className="text-sm font-bold">{p.name}</h4><div className="text-right"><div className="text-sm font-bold text-primary">{p.member}</div><div className="text-[10px] text-muted-foreground line-through">{p.price}</div></div></div>
+                      <div className="text-xs text-muted-foreground font-medium">Valid for {p.validity}</div>
+                      <Button variant="outline" size="sm" className="w-full h-7 text-[10px] font-semibold">Purchase</Button>
+                    </CardContent></Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== PAYMENTS VIEW ===== */}
+          {view === 'payments' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Payments</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card className="shadow-sm"><CardContent className="p-3"><div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Account Credit</div><div className="text-lg font-bold text-primary mt-0.5">$45.00</div><div className="text-[10px] text-muted-foreground font-medium">Expires Jun 8, 2026</div></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="p-3"><div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Outstanding</div><div className="text-lg font-bold mt-0.5">$0.00</div></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="p-3"><div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">This Month</div><div className="text-lg font-bold mt-0.5">$197.88</div></CardContent></Card>
+                  <Card className="shadow-sm"><CardContent className="p-3"><div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Lifetime</div><div className="text-lg font-bold mt-0.5">$2,847.50</div></CardContent></Card>
+                </div>
+                {/* Payment methods */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Payment Methods</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold"><Plus className="h-3 w-3 mr-1" />Add Card</Button></div></CardHeader><CardContent className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border"><div className="flex items-center gap-3"><div className="w-10 h-7 rounded bg-muted flex items-center justify-center"><CreditCard className="w-4 h-4 text-muted-foreground" /></div><div><div className="text-sm font-medium">Visa ending in 4242</div><div className="text-xs text-muted-foreground">Expires 08/2028</div></div></div><div className="flex items-center gap-2"><Badge className="text-[9px] py-0 bg-primary/10 text-primary border-primary/25">Default</Badge><button className="text-xs text-muted-foreground hover:text-foreground font-medium">Remove</button></div></div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border"><div className="flex items-center gap-3"><div className="w-10 h-7 rounded bg-muted flex items-center justify-center"><CreditCard className="w-4 h-4 text-muted-foreground" /></div><div><div className="text-sm font-medium">Mastercard ending in 8811</div><div className="text-xs text-muted-foreground">Expires 11/2027</div></div></div><div className="flex items-center gap-2"><button className="text-xs text-primary hover:underline font-medium">Set Default</button><button className="text-xs text-muted-foreground hover:text-foreground font-medium">Remove</button></div></div>
+                </CardContent></Card>
+                {/* Gift cards */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold">Gift Cards</CardTitle></CardHeader><CardContent className="space-y-2">
+                  <div className="flex gap-2"><input placeholder="Enter gift card code" className="flex-1 h-8 px-3 rounded-md border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40" /><Button size="sm" className="h-8 text-xs font-semibold">Redeem</Button></div>
+                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold w-full">Purchase Gift Card</Button>
+                </CardContent></Card>
+                {/* Transactions */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Transaction History</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Download CSV</Button></div></CardHeader><CardContent>
+                  {[{ date: 'Mar 21, 2026', desc: 'Court 1 — Pickleball (60 min)', amount: -38.25, method: 'Visa •4242', type: 'Booking' }, { date: 'Mar 18, 2026', desc: 'Court 2 — Pickleball (60 min)', amount: -38.25, method: 'Visa •4242', type: 'Booking' }, { date: 'Mar 15, 2026', desc: 'Court 1 — Pickleball (60 min)', amount: -38.25, method: 'Visa •4242', type: 'Booking' }, { date: 'Mar 12, 2026', desc: 'Court 5 — Tennis (120 min)', amount: -102.00, method: 'Visa •4242', type: 'Booking' }, { date: 'Mar 8, 2026', desc: 'Cancellation refund — Court 1', amount: 38.25, method: 'Account Credit', type: 'Refund' }, { date: 'Mar 1, 2026', desc: 'Gold Membership — March', amount: -99.00, method: 'Visa •4242', type: 'Membership' }, { date: 'Feb 15, 2026', desc: '10-Visit Court Pass', amount: -340.00, method: 'Visa •4242', type: 'Pass' }, { date: 'Feb 1, 2026', desc: 'Gold Membership — February', amount: -99.00, method: 'Visa •4242', type: 'Membership' }].map((tx, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-b-0">
+                      <div className="flex-1"><div className="text-sm font-medium">{tx.desc}</div><div className="text-xs text-muted-foreground font-medium">{tx.date} · {tx.method} · {tx.type}</div></div>
+                      <div className="text-right"><span className={`text-sm font-bold tabular-nums ${tx.amount > 0 ? 'text-green-600' : ''}`}>{tx.amount > 0 ? '+' : ''}${Math.abs(tx.amount).toFixed(2)}</span><button className="block text-[10px] font-semibold text-primary hover:underline ml-auto">Receipt</button></div>
+                    </div>
+                  ))}
+                </CardContent></Card>
+              </div>
+            </div>
+          )}
+
+          {/* ===== PROFILE VIEW ===== */}
+          {view === 'profile' && (
+            <div className="flex-1 overflow-y-auto animate-in fade-in duration-300">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-4">
+                <h2 className="text-lg font-bold">Profile</h2>
+                {/* Profile header */}
+                <Card className="shadow-sm"><CardContent className="p-4"><div className="flex items-center gap-4"><Avatar className="h-16 w-16"><AvatarFallback className="text-lg font-bold bg-primary/15 text-primary">JD</AvatarFallback></Avatar><div className="flex-1"><div className="flex items-center gap-2 flex-wrap"><h3 className="text-lg font-bold">Jane Doe</h3><Badge className="text-[10px] py-0 bg-primary/10 text-primary border-primary/25">Gold Member</Badge></div><p className="text-sm text-muted-foreground font-medium">Member since January 2026</p></div><Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold shrink-0">Edit Profile</Button></div></CardContent></Card>
+                {/* Contact info */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Contact Information</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Edit</Button></div></CardHeader><CardContent className="space-y-2.5">
+                  {[{ icon: Mail, label: 'Email', value: 'jane.doe@email.com' }, { icon: Phone, label: 'Phone', value: '+1 (416) 555-1234' }, { icon: MapPin, label: 'Address', value: '250 Queen St E, Toronto, ON M5A 1S2' }, { icon: CalendarDays, label: 'Date of Birth', value: 'June 15, 1990' }].map(f => (
+                    <div key={f.label} className="flex items-center gap-3"><f.icon className="h-4 w-4 text-muted-foreground shrink-0" /><div><div className="text-[10px] text-muted-foreground font-medium uppercase">{f.label}</div><div className="text-sm font-medium">{f.value}</div></div></div>
+                  ))}
+                </CardContent></Card>
+                {/* Emergency contact */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Emergency Contact</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Edit</Button></div></CardHeader><CardContent className="space-y-1">
+                  <div className="text-sm font-medium">John Doe (Spouse)</div><div className="text-xs text-muted-foreground font-medium">+1 (416) 555-5678</div>
+                </CardContent></Card>
+                {/* Sport preferences */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Sport Preferences</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold">Edit</Button></div></CardHeader><CardContent className="space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Sports Played</span><span className="font-medium">Pickleball, Tennis</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Primary Sport</span><span className="font-medium">Pickleball</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Pickleball Skill</span><span className="font-medium">Intermediate (3.5)</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Tennis Skill</span><span className="font-medium">Beginner (3.0)</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Preferred Times</span><span className="font-medium">Evenings, Weekends</span></div>
+                  <Separator />
+                  <div className="text-[10px] text-muted-foreground font-medium uppercase mb-1">Auto-Computed (from booking history)</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ label: 'Most Booked Sport', value: 'Pickleball (78%)' }, { label: 'Preferred Court', value: 'Court 1' }, { label: 'Avg Session', value: '68 min' }, { label: 'Frequency', value: '2.1/week' }].map(s => (
+                      <div key={s.label}><div className="text-[10px] text-muted-foreground font-medium">{s.label}</div><div className="text-sm font-medium">{s.value}</div></div>
+                    ))}
+                  </div>
+                </CardContent></Card>
+                {/* Waivers */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold">Waivers</CardTitle></CardHeader><CardContent className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border"><div><div className="text-sm font-medium">Facility Liability Waiver</div><div className="text-xs text-muted-foreground font-medium">Signed Jan 15, 2026 · Expires Jan 15, 2027</div></div><Badge className="text-[9px] py-0 bg-green-100 text-green-700">Current</Badge></div>
+                </CardContent></Card>
+                {/* Notification preferences */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold">Notification Preferences</CardTitle></CardHeader><CardContent className="space-y-3">
+                  <div className="text-[10px] text-muted-foreground font-medium uppercase">Channels</div>
+                  {[{ label: 'Email notifications', on: true }, { label: 'SMS / Text notifications', on: true }, { label: 'Push notifications (mobile)', on: false }].map(c => (
+                    <div key={c.label} className="flex items-center justify-between py-0.5"><span className="text-sm font-medium">{c.label}</span><Checkbox defaultChecked={c.on} /></div>
+                  ))}
+                  <Separator />
+                  <div className="text-[10px] text-muted-foreground font-medium uppercase">Message Types</div>
+                  {[{ label: 'Booking confirmations & reminders', on: true, locked: true }, { label: 'Payment receipts & alerts', on: true, locked: true }, { label: 'Marketing & promotions', on: true, locked: false }, { label: 'Facility announcements', on: true, locked: false }].map(t => (
+                    <div key={t.label} className="flex items-center justify-between py-0.5"><span className="text-sm font-medium">{t.label}{t.locked && <span className="text-[10px] text-muted-foreground ml-1">(required)</span>}</span><Checkbox defaultChecked={t.on} disabled={t.locked} /></div>
+                  ))}
+                </CardContent></Card>
+                {/* Household */}
+                <Card className="shadow-sm"><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-bold">Household</CardTitle><Button variant="outline" size="sm" className="h-7 text-[10px] font-semibold"><Plus className="h-3 w-3 mr-1" />Add Member</Button></div></CardHeader><CardContent>
+                  <div className="flex items-center justify-between py-2"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] font-bold bg-primary/15 text-primary">JD</AvatarFallback></Avatar><div><div className="text-sm font-medium">Jane Doe</div><div className="text-xs text-muted-foreground font-medium">Primary · Adult</div></div></div><Badge className="text-[9px] py-0 bg-primary/10 text-primary border-primary/25">Primary</Badge></div>
+                  <div className="flex items-center justify-between py-2 border-t border-border/50"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] font-bold bg-muted text-muted-foreground">JD</AvatarFallback></Avatar><div><div className="text-sm font-medium">John Doe</div><div className="text-xs text-muted-foreground font-medium">Member · Adult</div></div></div><button className="text-xs text-muted-foreground hover:text-foreground font-medium">Remove</button></div>
+                  <div className="flex items-center justify-between py-2 border-t border-border/50"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] font-bold bg-muted text-muted-foreground">SD</AvatarFallback></Avatar><div><div className="text-sm font-medium">Sam Doe</div><div className="text-xs text-muted-foreground font-medium">Member · Minor (age 14)</div></div></div><button className="text-xs text-muted-foreground hover:text-foreground font-medium">Remove</button></div>
+                </CardContent></Card>
+                {/* Account actions */}
+                <div className="space-y-2 pt-2">
+                  <Button variant="outline" className="w-full h-10 text-sm font-semibold justify-start"><Lock className="h-4 w-4 mr-2" />Change Password</Button>
+                  <Button variant="outline" className="w-full h-10 text-sm font-semibold justify-start"><Shield className="h-4 w-4 mr-2" />Privacy & Data</Button>
+                  <Button variant="outline" className="w-full h-10 text-sm font-semibold justify-start text-destructive hover:text-destructive" onClick={() => setIsLoggedIn(false)}><LogIn className="h-4 w-4 mr-2" />Sign Out</Button>
                 </div>
               </div>
             </div>
@@ -1332,7 +1783,7 @@ export default function BookingPortal() {
             const Icon = tab.icon;
             const active = activePortalNav === tab.id || (tab.id === 'book' && activePortalNav === 'book');
             return (
-              <button key={tab.id} onClick={() => { setActivePortalNav(tab.id); if (tab.id === 'book') { setView('grid'); setSelectedSlot(null); } }}
+              <button key={tab.id} onClick={() => { setActivePortalNav(tab.id); const viewMap: Record<string, PortalView> = { book: 'grid', bookings: 'my-bookings', programs: 'programs', payments: 'payments', profile: 'profile' }; setView(viewMap[tab.id] || 'grid'); if (tab.id === 'book') setSelectedSlot(null); }}
                 className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.6} />
                 <span className={`text-[10px] ${active ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
@@ -1349,9 +1800,9 @@ export default function BookingPortal() {
           <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-md md:mx-4 animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200 max-h-[90vh] overflow-y-auto">
             {/* Drag handle (mobile only) */}
             <div className="flex justify-center pt-3 pb-1 md:hidden"><div className="w-10 h-1 rounded-full bg-border" /></div>
-            <div className="p-5 md:p-6">
+            <div className="p-4 sm:p-5 md:p-6">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4 sm:mb-5">
                 <h3 className="text-lg font-bold">Book a Court</h3>
                 <button onClick={() => setShowBookingModal(false)} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors" aria-label="Close">
                   <X className="h-4 w-4" />
@@ -1628,6 +2079,206 @@ export default function BookingPortal() {
           </div>
         </div>
       )}
+
+      {/* ===== BOOKING DETAIL MODAL ===== */}
+      {showBookingDetail && selectedBookingId && (() => {
+        const bk = UPCOMING_BOOKINGS_DETAIL.find(b => b.id === selectedBookingId);
+        if (!bk) return null;
+        const closeDetail = () => { setShowBookingDetail(false); setSelectedBookingId(null); };
+        return (
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 animate-in fade-in duration-200" onClick={closeDetail} />
+            <div className="relative bg-card rounded-t-2xl md:rounded-xl shadow-xl border w-full md:max-w-md md:mx-4 max-h-[92vh] flex flex-col animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 fade-in duration-200">
+              {/* Drag handle (mobile) */}
+              <div className="flex justify-center pt-3 pb-1 md:hidden"><div className="w-10 h-1 rounded-full bg-border" /></div>
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto flex-1">
+                <div className="p-5 md:p-6 space-y-5">
+                  {/* Header */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold">{bk.court}</h3>
+                        <Badge className={`text-[9px] py-0 border ${sportBadgeClass(bk.sport)}`}>{bk.sport}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground font-medium mt-0.5">{bk.date}</p>
+                      <p className="text-sm font-semibold mt-0.5">{bk.time} <span className="text-muted-foreground font-medium">({bk.duration})</span></p>
+                    </div>
+                    <button onClick={closeDetail} className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors shrink-0" aria-label="Close">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* ---- ACCESS & CHECK-IN (dynamic based on facility config) ---- */}
+                  <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+                    <p className="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                      <DoorOpen className="h-3.5 w-3.5" /> Access & Check-in
+                    </p>
+
+                    {/* Door Code */}
+                    {FACILITY_ACCESS_CONFIG.methods.includes('door-code') && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Key className="h-5 w-5 text-primary" /></div>
+                        {bk.doorCodeAvailable ? (
+                          <div className="flex-1">
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Door Code</div>
+                            <div className="text-2xl font-bold tracking-[0.2em] font-mono text-foreground">{bk.doorCode}</div>
+                          </div>
+                        ) : (
+                          <div className="flex-1">
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Door Code</div>
+                            <div className="text-sm font-medium text-muted-foreground">Available {FACILITY_ACCESS_CONFIG.doorCodeLeadHours}hr before your booking</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* QR Code */}
+                    {FACILITY_ACCESS_CONFIG.methods.includes('qr-code') && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><QrCode className="h-5 w-5 text-primary" /></div>
+                        <div className="flex-1">
+                          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">QR Code</div>
+                          <div className="text-sm font-medium text-primary">Show at entrance</div>
+                        </div>
+                        <Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold shrink-0">View QR</Button>
+                      </div>
+                    )}
+
+                    {/* Wallet Pass */}
+                    {FACILITY_ACCESS_CONFIG.methods.includes('wallet-pass') && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Wallet className="h-5 w-5 text-primary" /></div>
+                        <div className="flex-1">
+                          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Wallet Pass</div>
+                          <div className="text-sm font-medium text-primary">Add to Apple / Google Wallet</div>
+                        </div>
+                        <Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold shrink-0">Add</Button>
+                      </div>
+                    )}
+
+                    {/* Smart Lock (would show if configured) */}
+                    {FACILITY_ACCESS_CONFIG.methods.includes('smart-lock' as never) && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Smartphone className="h-5 w-5 text-primary" /></div>
+                        <div className="flex-1">
+                          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Smart Lock</div>
+                          <div className="text-sm font-medium text-primary">Tap to unlock door</div>
+                        </div>
+                        <Button variant="outline" size="sm" className="h-8 text-[11px] font-semibold shrink-0">Unlock</Button>
+                      </div>
+                    )}
+
+                    {/* Front Desk (would show if configured) */}
+                    {FACILITY_ACCESS_CONFIG.methods.includes('front-desk' as never) && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0"><UserCircle className="h-5 w-5 text-muted-foreground" /></div>
+                        <div className="flex-1">
+                          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Check-in</div>
+                          <div className="text-sm font-medium text-muted-foreground">Report to front desk on arrival</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Access window */}
+                    <div className="text-[10px] text-muted-foreground font-medium pt-1 border-t border-primary/10">
+                      Access valid <span className="font-semibold text-foreground">{bk.accessWindow}</span> ({FACILITY_ACCESS_CONFIG.earlyArrivalBuffer} min early arrival buffer)
+                    </div>
+
+                    {/* Check-in instructions */}
+                    {FACILITY_ACCESS_CONFIG.checkInInstructions && (
+                      <div className="text-[10px] text-muted-foreground font-medium">{FACILITY_ACCESS_CONFIG.checkInInstructions}</div>
+                    )}
+                  </div>
+
+                  {/* ---- PLAYERS ---- */}
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Players ({bk.players.length})</p>
+                    <div className="space-y-1.5">
+                      {bk.players.map((p, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6"><AvatarFallback className="text-[9px] font-bold">{p.name.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>
+                          <span className="text-sm font-medium">{p.name}</span>
+                          {p.isOrganizer && <Badge variant="secondary" className="text-[8px] py-0">Organizer</Badge>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ---- PRICE BREAKDOWN ---- */}
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Price Breakdown</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Court rental ({bk.duration})</span><span className="font-medium">${bk.pricing.base.toFixed(2)}</span></div>
+                      {bk.pricing.memberDiscount !== 0 && <div className="flex justify-between text-green-600"><span>Member discount (15%)</span><span className="font-medium">{bk.pricing.memberDiscount > 0 ? '+' : ''}${bk.pricing.memberDiscount.toFixed(2)}</span></div>}
+                      {bk.pricing.addOns.map((ao, i) => <div key={i} className="flex justify-between"><span className="text-muted-foreground">{ao.name}</span><span className="font-medium">${ao.price.toFixed(2)}</span></div>)}
+                      <Separator className="my-1" />
+                      <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">${bk.pricing.subtotal.toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Tax (HST 13%)</span><span className="font-medium">${bk.pricing.tax.toFixed(2)}</span></div>
+                      <Separator className="my-1" />
+                      <div className="flex justify-between font-bold"><span>Total</span><span>${bk.pricing.total.toFixed(2)}</span></div>
+                    </div>
+                  </div>
+
+                  {/* ---- BOOKING INFO ---- */}
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Booking Info</p>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="font-mono font-medium text-xs">{bk.id}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Surface</span><span className="font-medium">{bk.surface}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Booked</span><span className="font-medium">{bk.bookedAt}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Payment</span><span className="font-medium">{bk.paymentMethod}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge className="text-[9px] py-0 bg-green-100 text-green-700">{bk.paymentStatus}</Badge></div>
+                    </div>
+                  </div>
+
+                  {/* ---- QUICK ACTIONS ---- */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <button className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                      <CalendarIcon className="h-4.5 w-4.5 text-muted-foreground" />
+                      <span className="text-[10px] font-semibold text-muted-foreground">Calendar</span>
+                    </button>
+                    <button className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Share2 className="h-4.5 w-4.5 text-muted-foreground" />
+                      <span className="text-[10px] font-semibold text-muted-foreground">Share</span>
+                    </button>
+                    <button className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Receipt className="h-4.5 w-4.5 text-muted-foreground" />
+                      <span className="text-[10px] font-semibold text-muted-foreground">Receipt</span>
+                    </button>
+                    <button className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Copy className="h-4.5 w-4.5 text-muted-foreground" />
+                      <span className="text-[10px] font-semibold text-muted-foreground">Copy Ref</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ---- STICKY FOOTER — Policy-aware actions ---- */}
+              <div className="p-4 border-t shrink-0 space-y-2 safe-area-bottom">
+                <div className="flex gap-2">
+                  {bk.canReschedule && (
+                    <Button variant="outline" className="flex-1 h-10 text-sm font-semibold">
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reschedule
+                    </Button>
+                  )}
+                  {bk.canCancel && (
+                    <Button variant="outline" className="flex-1 h-10 text-sm font-semibold text-destructive hover:text-destructive">
+                      <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
+                    </Button>
+                  )}
+                </div>
+                {bk.canCancel && (
+                  <p className="text-[10px] text-center text-muted-foreground font-medium">
+                    Free cancellation until {bk.cancelDeadline}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
     </TooltipProvider>
