@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { StatusBadge, SPageHeader, STabBar, SToolbar, SSearchInput, SFilterPill, SMetricCard } from "@/components/shared";
+import { StatusBadge, STabBar, SToolbar, SSearchInput, SFilterPill, SMetricCard } from "@/components/shared";
 import { Plus, Download, X, MoreHorizontal, Receipt, RefreshCw, Send, DollarSign, TrendingUp, TrendingDown, ExternalLink, FileText, CheckCircle2, Pencil, Ban } from "lucide-react";
 
 // ============================================================
@@ -139,11 +139,10 @@ export default function BillingView() {
 
   return (
     <>
-      <SPageHeader title="Billing">
-        <Button variant="outline" className="h-9 text-xs font-bold px-4 btn-outline-modern"><Download className="w-3.5 h-3.5 mr-1.5" />Export</Button>
-        <Button className="h-9 text-xs font-bold px-5 btn-primary-modern" onClick={() => setShowCreateInvoice(true)}><Plus className="w-3.5 h-3.5 mr-1.5" />Create Invoice</Button>
-      </SPageHeader>
-      <STabBar tabs={['Overview', 'Transactions', 'Invoices', 'Reports']} active={tab} onChange={handleTabChange} />
+      <STabBar tabs={['Overview', 'Transactions', 'Invoices', 'Reports']} active={tab} onChange={handleTabChange} actions={<>
+        <Button variant="outline" className="h-8 text-xs font-bold px-4 btn-outline-modern"><Download className="w-3.5 h-3.5 mr-1.5" />Export</Button>
+        <Button className="h-8 text-xs font-bold px-5 btn-primary-modern" onClick={() => setShowCreateInvoice(true)}><Plus className="w-3.5 h-3.5 mr-1.5" />Create Invoice</Button>
+      </>} />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
 

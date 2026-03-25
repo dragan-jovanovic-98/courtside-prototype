@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  SPageHeader,
   STabBar,
   SToolbar,
   SSearchInput,
@@ -47,8 +46,9 @@ export default function AIDashboardView() {
   const [search, setSearch] = useState('');
   return (
     <>
-      <SPageHeader title="AI Dashboard"><Button variant="outline" className="h-9 text-xs font-bold btn-outline-modern"><Settings className="w-3.5 h-3.5 mr-1.5" />Configure AI</Button></SPageHeader>
-      <STabBar tabs={['Analytics', 'Call Log', 'Chat Log', 'Configuration']} active={tab} onChange={setTab} />
+      <STabBar tabs={['Analytics', 'Call Log', 'Chat Log', 'Configuration']} active={tab} onChange={setTab} actions={
+        <Button variant="outline" className="h-8 text-xs font-bold btn-outline-modern"><Settings className="w-3.5 h-3.5 mr-1.5" />Configure AI</Button>
+      } />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {tab === 'Call Log' && (<>

@@ -117,15 +117,19 @@ export function SFilterPill({ label, active, onClick }: { label: string; active:
   );
 }
 
-export function STabBar({ tabs, active, onChange }: { tabs: string[]; active: string; onChange: (t: string) => void }) {
+export function STabBar({ tabs, active, onChange, actions, badge }: { tabs: string[]; active: string; onChange: (t: string) => void; actions?: React.ReactNode; badge?: string }) {
   return (
-    <div className="flex items-center border-b border-border px-3 md:px-6 bg-card shrink-0 overflow-x-auto">
-      {tabs.map(tab => (
-        <button key={tab} onClick={() => onChange(tab)}
-          className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold border-b-2 transition-colors -mb-px whitespace-nowrap ${active === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
-          {tab}
-        </button>
-      ))}
+    <div className="flex items-center border-b border-border px-3 md:px-6 bg-card shrink-0">
+      {badge && <Badge variant="secondary" className="text-[10px] mr-2 shrink-0">{badge}</Badge>}
+      <div className="flex items-center overflow-x-auto">
+        {tabs.map(tab => (
+          <button key={tab} onClick={() => onChange(tab)}
+            className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold border-b-2 transition-colors -mb-px whitespace-nowrap ${active === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+            {tab}
+          </button>
+        ))}
+      </div>
+      {actions && <div className="ml-auto flex items-center gap-2 shrink-0 pl-4">{actions}</div>}
     </div>
   );
 }

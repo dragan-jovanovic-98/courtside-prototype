@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  SPageHeader,
   STabBar,
   SToolbar,
   SSearchInput,
@@ -53,8 +52,9 @@ export default function AccessView() {
   const checkedInCount = arrivals.filter(a => a.checkedIn).length;
   return (
     <>
-      <SPageHeader title="Access & Check-in"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Manual Check-in</Button></SPageHeader>
-      <STabBar tabs={["Today's Activity", 'Access Log']} active={tab} onChange={setTab} />
+      <STabBar tabs={["Today's Activity", 'Access Log']} active={tab} onChange={setTab} actions={
+        <Button className="h-8 text-xs font-bold px-5 btn-primary-modern"><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Manual Check-in</Button>
+      } />
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         {tab === "Today's Activity" && (<>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

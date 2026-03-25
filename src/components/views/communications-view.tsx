@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  SPageHeader,
   STabBar,
   SToolbar,
   SSearchInput,
@@ -135,13 +134,12 @@ export default function CommunicationsView() {
 
   return (
     <>
-      <SPageHeader title="Communications">
-        {tab === 'Message Log' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Compose</Button>}
-        {tab === 'Campaigns' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Campaign</Button>}
-        {tab === 'Templates' && <Button onClick={() => setEditingTemplate('New Template')} className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Template</Button>}
-        {tab === 'Delivery Issues' && <Button variant="outline" className="h-9 text-xs font-bold px-5 btn-outline-modern"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Retry All</Button>}
-      </SPageHeader>
-      <STabBar tabs={['Message Log', 'Campaigns', 'Templates', 'Delivery Issues']} active={tab} onChange={setTab} />
+      <STabBar tabs={['Message Log', 'Campaigns', 'Templates', 'Delivery Issues']} active={tab} onChange={setTab} actions={<>
+        {tab === 'Message Log' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-8 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Compose</Button>}
+        {tab === 'Campaigns' && <Button onClick={() => { setComposeOpen(true); setComposeStep(1); }} className="h-8 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Campaign</Button>}
+        {tab === 'Templates' && <Button onClick={() => setEditingTemplate('New Template')} className="h-8 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />New Template</Button>}
+        {tab === 'Delivery Issues' && <Button variant="outline" className="h-8 text-xs font-bold px-5 btn-outline-modern"><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Retry All</Button>}
+      </>} />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
 

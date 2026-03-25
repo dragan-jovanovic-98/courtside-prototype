@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { StatusBadge, SPageHeader, STabBar, SToolbar, SSearchInput, SFilterPill } from "@/components/shared";
+import { StatusBadge, STabBar, SToolbar, SSearchInput, SFilterPill } from "@/components/shared";
 import { Plus, X, MoreHorizontal, Users, Calendar, MapPin, Star } from "lucide-react";
 
 // ============================================================
@@ -56,8 +56,9 @@ export default function ProgramsView() {
 
   return (
     <>
-      <SPageHeader title="Programs"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create Program</Button></SPageHeader>
-      <STabBar tabs={['My Programs', 'Instructors']} active={tab} onChange={(t) => { setTab(t); setSelectedProgram(null); setSelectedInstructor(null); }} />
+      <STabBar tabs={['My Programs', 'Instructors']} active={tab} onChange={(t) => { setTab(t); setSelectedProgram(null); setSelectedInstructor(null); }} actions={
+        <Button className="h-8 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create Program</Button>
+      } />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         {tab === 'My Programs' && (

@@ -619,18 +619,8 @@ export default function HomePage() {
 
         {/* ===== HOME PAGE ===== */}
         {activeNav === 'home' && (<>
-        {/* Home sub-bar — Schedule / Dashboard toggle */}
-        <div className="h-11 border-b bg-card/50 shrink-0 flex items-center px-3 md:px-5">
-          <div className="flex items-center border border-border rounded-md overflow-hidden">
-            {(['schedule', 'dashboard'] as const).map((tab, i) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 text-[13px] font-semibold transition-colors ${i > 0 ? 'border-l border-border' : ''}
-                  ${activeTab === tab ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
-                {tab === 'schedule' ? 'Schedule' : 'Dashboard'}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Home sub-bar — Schedule / Dashboard tabs */}
+        <STabBar tabs={['Schedule', 'Dashboard']} active={activeTab === 'schedule' ? 'Schedule' : 'Dashboard'} onChange={(t) => setActiveTab(t === 'Schedule' ? 'schedule' : 'dashboard')} />
 
         {/* ===== SCHEDULE TAB ===== */}
         {activeTab === 'schedule' && (
@@ -1008,22 +998,13 @@ export default function HomePage() {
         {activeTab === 'dashboard' && (
           <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto">
-            {/* Dashboard toolbar */}
-            <div className="px-3 md:px-6 py-3 border-b bg-card flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-1">
-                <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4 text-muted-foreground" /></button>
-                <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-muted transition-colors">
-                  <span className="text-xs md:text-sm font-semibold text-foreground">FRI, MAR 20</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-                <button className="p-0.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold px-3 hidden md:flex">Walk-In</Button>
-                <Button size="sm" className="h-8 md:h-9 text-xs font-bold px-3 md:px-5 btn-primary-modern">+ New</Button>
-              </div>
-            </div>
             <div className="p-3 md:p-6">
+              {/* Period selector */}
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
+                {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month']] as const).map(([key, label]) => (
+                  <button key={key} className={`h-8 px-4 rounded-md text-xs font-bold transition-colors ${key === 'today' ? 'bg-foreground text-background' : 'bg-muted/50 text-muted-foreground hover:bg-muted'}`}>{label}</button>
+                ))}
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
                 {[
                   { label: 'Revenue Today', value: `$${dashTotalRevenue.toLocaleString()}`, change: '↑ 12% vs. last week', positive: true },

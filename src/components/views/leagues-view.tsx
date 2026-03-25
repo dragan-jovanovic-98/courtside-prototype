@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, SPageHeader, STabBar, SToolbar, SSearchInput, SFilterPill } from "@/components/shared";
+import { StatusBadge, STabBar, SToolbar, SSearchInput, SFilterPill } from "@/components/shared";
 import { Plus, Trophy, Calendar, Users, DollarSign, X, CheckCircle2, MoreHorizontal } from "lucide-react";
 
 const MOCK_LEAGUES = [
@@ -63,8 +63,9 @@ export default function LeaguesView() {
   });
   return (
     <>
-      <SPageHeader title="Leagues & Events"><Button className="h-9 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create League</Button></SPageHeader>
-      <STabBar tabs={['All', 'Leagues', 'Tournaments', 'Events']} active={tab} onChange={setTab} />
+      <STabBar tabs={['All', 'Leagues', 'Tournaments', 'Events']} active={tab} onChange={setTab} actions={
+        <Button className="h-8 text-xs font-bold px-5 btn-primary-modern"><Plus className="w-3.5 h-3.5 mr-1.5" />Create League</Button>
+      } />
       <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
         <SToolbar>
